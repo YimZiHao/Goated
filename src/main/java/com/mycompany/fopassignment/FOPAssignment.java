@@ -11,6 +11,8 @@ package com.mycompany.fopassignment;
 public class FOPAssignment {
 
     public static void main(String[] args) {
-        System.out.println("Hello World!");
+        User user1 = new User("s100201@student.fop", "Foo Bar", "pw-Stud#1");
+        User user2 = new User("s100202@student.fop", "John Doe", "pw-Stud#2");
+        System.out.println(user1.getDisplayName());
     }
 }
