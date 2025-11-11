@@ -14,5 +14,8 @@ public class FOPAssignment {
         User user1 = new User("s100201@student.fop", "Foo Bar", "pw-Stud#1");
         User user2 = new User("s100202@student.fop", "John Doe", "pw-Stud#2");
         System.out.println(user1.getDisplayName());
+        System.out.println(user2.getDisplayName());
+        System.out.println(user1.toString());
+        System.out.println(user2.toString());
     }
 }
