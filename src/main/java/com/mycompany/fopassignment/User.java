@@ -23,7 +23,7 @@ public class User {
         return "User{" + "emailAddress=" + emailAddress + ", password=" + password + ", displayName=" + displayName + '}';
     }
     
-    private String cipher(String password){
+    public String cipher(String password){
         StringBuilder cipherText = new StringBuilder(); //using StringBuilder to append characters to ciphered password
         char character;
         for(int i = 0; i < password.length(); i++){
@@ -40,8 +40,16 @@ public class User {
         return cipherText.toString();
     }
     
-    String getDisplayName() {
+    public String getDisplayName() {
         return displayName;
+    }
+
+    public String getEmailAddress() {
+        return emailAddress;
+    }
+
+    public String getPassword() {
+        return password;
     }
     
     
