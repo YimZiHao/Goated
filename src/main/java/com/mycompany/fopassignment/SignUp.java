@@ -3,7 +3,13 @@ package com.mycompany.fopassignment;
 import java.sql.Connection;
 import java.sql.SQLException;
 import com.mysql.cj.jdbc.MysqlDataSource;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.util.Scanner;
 import javax.swing.JOptionPane;
 import javax.swing.JPasswordField;
 
@@ -12,91 +18,123 @@ public class SignUp {
     private final static String CONN_STRING = "jdbc:mysql://localhost:3306/goated";
 
     public static void main(String[] args) {
-//        String username = JOptionPane.showInputDialog(null, "Enter DB Username");
-//
-//        JPasswordField pf = new JPasswordField();
-//        int okCxl = JOptionPane.showConfirmDialog(null, pf, "Enter DB Password", JOptionPane.OK_CANCEL_OPTION);
-//        final char[] password = (okCxl == JOptionPane.OK_OPTION) ? pf.getPassword() : null;
-//
-//        if (username == null || username.isEmpty() || password == null || password.length == 0) {
-//            JOptionPane.showMessageDialog(null, "Username or password cannot be empty!");
-//            return;
-//        }
+        Scanner sc = new Scanner(System.in);
+        // Prompt password
+        JPasswordField pf = new JPasswordField();
+        int okCxl = JOptionPane.showConfirmDialog(null, pf, "Enter DB Password", JOptionPane.OK_CANCEL_OPTION);
+        final char[] passwordDB = (okCxl == JOptionPane.OK_OPTION) ? pf.getPassword() : null;
 
         MysqlDataSource dataSource = new MysqlDataSource();
         dataSource.setURL(CONN_STRING);
-//        dataSource.setUser(username);
-//        dataSource.setPassword(new String(password));
 
-        //Only use these two lines while coding and set your username and password to skip login everytime.
-        //Remember to delete your username and password before pushing.
-        //Line 15 to 24 and 28 to 29 are used to prompt user
-//        dataSource.setUser("root");
-//        dataSource.setPassword();
+        // YOUR DB credentials
+        dataSource.setUser("root");
+        dataSource.setPassword(new String(passwordDB));
 
         try (Connection connection = dataSource.getConnection()) {
             JOptionPane.showMessageDialog(null, "Success! Connection made to 'goated' database.");
-            
-//            Already stored these 2 sample users in database
-//            User user1 = new User("s100201@student.fop", "Foo Bar", "pw-stud#1");   
-//            User user2 = new User("s100202@student.fop", "John Doe", "pw-stud#2");
 
-//            insertUser(user1, connection);
-//            insertUser(user2, connection);
+            System.out.print("Enter Your Name: ");
+            String displayName = sc.nextLine();
+            System.out.print("Enter Your Email: ");
+            String email = sc.nextLine();
+            JPasswordField jk = new JPasswordField();
+            okCxl = JOptionPane.showConfirmDialog(null, jk, "Enter Your Password", JOptionPane.OK_CANCEL_OPTION);
+            final char[] password = (okCxl == JOptionPane.OK_OPTION) ? jk.getPassword() : null;
+            insertUser(new User(email, displayName, new String(password)), connection);
 
-        
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(null, "Connection failed:\n" + e.getMessage());
         }
-        
-        
     }
-    
-    public static void insertUser(User user , Connection connection) {
-        try { 
-            // Validate input
-            if (user.getEmailAddress() == null || user.getEmailAddress().isEmpty() || 
-                user.getDisplayName() == null || user.getDisplayName().isEmpty() || 
-                user.getPassword() == null || user.getPassword().isEmpty()) {
+
+    public static void insertUser(User user, Connection connection) {
+        try {
+            // -------------------------------
+            // 1. Input validation
+            // -------------------------------
+            if (user.getEmailAddress().isEmpty()
+                    || user.getDisplayName().isEmpty()
+                    || user.getPassword().isEmpty()) {
+
                 JOptionPane.showMessageDialog(null, "All fields are required!");
                 return;
             }
-            
-            // Basic email validation
+
             if (!user.getEmailAddress().contains("@") || !user.getEmailAddress().contains(".")) {
                 JOptionPane.showMessageDialog(null, "Please enter a valid email address!");
                 return;
             }
-            
-            // SQL INSERT statement with placeholders
-            String insertSQL = "INSERT INTO user (`Email Address`,  `Password`, `Display Name`) VALUES (?, ?, ?)";
-            
-            try (PreparedStatement preparedStatement = connection.prepareStatement(insertSQL)) {
-                // Set parameters
-                preparedStatement.setString(1, user.getEmailAddress());
-                preparedStatement.setString(2, user.getPassword());
-                preparedStatement.setString(3, user.getDisplayName());
-                
-                // Execute the insert
-                int rowsAffected = preparedStatement.executeUpdate();
-                
-                if (rowsAffected > 0) {
-                    JOptionPane.showMessageDialog(null, "User registered successfully!\n" +
-                        "Email: " + user.getEmailAddress() + "\n" +
-                        "Display Name: " + user.getDisplayName());
+
+            // -------------------------------
+            // 2. Check if Display Name exists
+            // -------------------------------
+            String checkNameSQL = "SELECT COUNT(*) FROM user WHERE `Display Name` = ?";
+            try (PreparedStatement checkStmt = connection.prepareStatement(checkNameSQL)) {
+
+                checkStmt.setString(1, user.getDisplayName());
+
+                try (ResultSet rs = checkStmt.executeQuery()) {
+                    if (rs.next() && rs.getInt(1) > 0) {
+                        JOptionPane.showMessageDialog(null, "Display Name already taken!");
+                        return;
+                    }
+                }
+            }
+
+            // -------------------------------
+            // 3. Check if Email exists
+            // -------------------------------
+            String checkEmailSQL = "SELECT COUNT(*) FROM user WHERE `Email Address` = ?";
+            try (PreparedStatement checkStmt = connection.prepareStatement(checkEmailSQL)) {
+
+                checkStmt.setString(1, user.getEmailAddress());
+
+                try (ResultSet rs = checkStmt.executeQuery()) {
+                    if (rs.next() && rs.getInt(1) > 0) {
+                        JOptionPane.showMessageDialog(null, "Email already exists!");
+                        return;
+                    }
+                }
+            }
+
+            // -------------------------------
+            // 4. Insert user into MySQL database and txt file
+            // -------------------------------
+            String insertSQL = "INSERT INTO user (`Email Address`, `Password`, `Display Name`) VALUES (?, ?, ?)";
+
+            try (PreparedStatement insertStmt = connection.prepareStatement(insertSQL)) {
+
+                insertStmt.setString(1, user.getEmailAddress());
+                insertStmt.setString(2, user.getPassword());
+                insertStmt.setString(3, user.getDisplayName());
+
+                int rows = insertStmt.executeUpdate();
+
+                if (rows > 0) {
+                    JOptionPane.showMessageDialog(null,
+                            "User registered successfully!\n"
+                            + "Email: " + user.getEmailAddress() + "\n"
+                            + "Display Name: " + user.getDisplayName());
+
+                    //Write new user into UserData.txt
+                    try {
+                        PrintWriter outputStream = new PrintWriter(new FileOutputStream("src\\main\\java\\com\\mycompany\\fopassignment\\UserData.txt", true));
+                        outputStream.println(user.getEmailAddress());
+                        outputStream.println(user.getDisplayName());
+                        outputStream.println(user.getPassword() + "\n");
+                        outputStream.close();
+                    } catch (IOException e) {
+                        System.out.print("Something went wrong with output!!!");
+                    }
+
                 } else {
                     JOptionPane.showMessageDialog(null, "Failed to register user!");
                 }
-                
             }
-            
+
         } catch (SQLException e) {
-            // Handle specific SQL errors
-            if (e.getErrorCode() == 1062) { // MySQL duplicate entry error code
-                JOptionPane.showMessageDialog(null, "Email already exists! Please use a different email.");
-            } else {
-                JOptionPane.showMessageDialog(null, "Database error:\n" + e.getMessage());
-            }
+            JOptionPane.showMessageDialog(null, "Database error:\n" + e.getMessage());
         } catch (Exception e) {
             JOptionPane.showMessageDialog(null, "Unexpected error:\n" + e.getMessage());
         }
