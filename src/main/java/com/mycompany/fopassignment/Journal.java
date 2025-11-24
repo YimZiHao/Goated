@@ -20,8 +20,10 @@ import java.util.Scanner;
 public class Journal {
     public static void main(String[] args) {
         LocalDate today = LocalDate.now();
-        System.out.println("=== Journal Dates ===");
         
+        User user = new User("test@gmail.com", "test", "1234");
+        viewJournal(user, today);
+//        System.out.println("=== Journal Dates ===");
 //        System.out.print("Select a date to view journal, or create a new journal for today:\n>");
 //        System.out.print("Press Enter to go back.\n>");
 //        System.out.println("""
@@ -34,9 +36,9 @@ public class Journal {
 //                           """);
     }
     
-    public static void createJournal(String date){
+    public static void createJournal(User user, LocalDate date){
         Scanner scanner = new Scanner(System.in);
-        String fileName = "%s.txt".formatted(date);
+        String fileName = "Journal Entries\\%s\\%s.txt".formatted(user.getDisplayName(), date);
         try {
             PrintWriter outputStream = new PrintWriter(new FileOutputStream(fileName));
             
@@ -50,8 +52,8 @@ public class Journal {
         }
     }
     
-    public static void viewJournal(String date){
-        String fileName = "%s.txt".formatted(date);
+    public static void viewJournal(User user, LocalDate date){
+        String fileName = "Journal Entries\\%s\\%s.txt".formatted(user.getDisplayName(), date);
         try {
             BufferedReader inputStream = new BufferedReader(new FileReader(fileName));
             String line;
