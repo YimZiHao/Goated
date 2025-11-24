@@ -129,7 +129,7 @@ public class SignUp {
                     } catch (IOException e) {
                         System.out.print("Something went wrong with output!!!");
                     }
-                      Path path = Path.of(user.getDisplayName());
+                      Path path = Path.of("Journal Entries\\%s".formatted(user.getDisplayName()));
 
                     try {
                         Files.createDirectory(path);
