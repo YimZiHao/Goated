@@ -7,6 +7,8 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.Scanner;
@@ -127,8 +129,16 @@ public class SignUp {
                     } catch (IOException e) {
                         System.out.print("Something went wrong with output!!!");
                     }
+                      Path path = Path.of(user.getDisplayName());
 
-                } else {
+                    try {
+                        Files.createDirectory(path);
+                        System.out.println("Folder created!");
+                    } catch (IOException e) {
+                        System.out.println("Error: " + e.getMessage());
+                    }
+
+                    }else {
                     JOptionPane.showMessageDialog(null, "Failed to register user!");
                 }
             }
