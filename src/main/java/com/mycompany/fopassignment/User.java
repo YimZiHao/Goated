@@ -4,6 +4,8 @@
  */
 package com.mycompany.fopassignment;
 
+import java.util.ArrayList;
+
 /**
  *
  * @author Yim Zi Hao
@@ -11,6 +13,7 @@ package com.mycompany.fopassignment;
 public class User {
     
     private String emailAddress, password, displayName;
+    private ArrayList<String> journals = new ArrayList<>();
 
     User(String emailAddress, String displayName, String password) {
         this.emailAddress = emailAddress;
@@ -40,6 +43,10 @@ public class User {
         return cipherText.toString();
     }
     
+    public void addJournal(String journalDate){
+        journals.add(journalDate);
+    }
+    
     public String getDisplayName() {
         return displayName;
     }
@@ -51,6 +58,8 @@ public class User {
     public String getPassword() {
         return password;
     }
-    
-    
+
+    public ArrayList<String> getJournals() {
+        return journals;
+    }
 }
