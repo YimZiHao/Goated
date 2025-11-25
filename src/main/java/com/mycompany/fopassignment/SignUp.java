@@ -138,6 +138,12 @@ public class SignUp {
                     } catch (IOException e) {
                         System.out.println("Error: " + e.getMessage());
                     }
+                    
+                    try {
+                    PrintWriter outputStream = new PrintWriter( new FileOutputStream("Journal Entries\\%s\\Dates.txt".formatted(user.getDisplayName())));
+                    } catch (IOException e) {
+                        System.out.print("Something went wrong with output!!!");
+                    }
 
                     }else {
                     JOptionPane.showMessageDialog(null, "Failed to register user!");
