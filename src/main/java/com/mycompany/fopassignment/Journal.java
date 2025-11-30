@@ -104,24 +104,30 @@ public class Journal {
     }
     
     public static String Date(User user){
-        ArrayList<String> journalEntries = user.getJournals();
+
+
+        String[] journalEntries = user.getJournals();
         Scanner scanner = new Scanner(System.in);
         LocalDate today = LocalDate.now();
         
         System.out.print("=== Journal Dates === ");
         int i = 0;
-        while (i < journalEntries.size()){
-            System.out.printf("\n%d. %s", (i + 1), journalEntries.get(i));
+        while (i < journalEntries.length){
+            if(journalEntries[i].equals(today.toString())){
+                System.out.printf("&d. %s (Today)\n", (i+ 1), journalEntries[i]);
+                continue;
+            }
+            System.out.printf("&d. %s\n", (i+ 1), journalEntries[i]);
             i++;
         }
-        if(!journalEntries.contains(today.toString())){
-            System.out.printf("\n%d. %s", (i + 1), today);
+        if(journalEntries[journalEntries.length - 1].equals(today.toString())){
+                System.out.printf("&d. %s (Today)\n", (i+ 1), today.toString());
         }
-        System.out.println(" (Today)\n");
         
         System.out.print("Select a date to view journal, or create a new journal for today:\n>");
         int date = scanner.nextInt() - 1;
         
-        return journalEntries.get(date);
+        return journalEntries[date];
+
     }
 }

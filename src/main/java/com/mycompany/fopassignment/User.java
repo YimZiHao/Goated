@@ -4,6 +4,10 @@
  */
 package com.mycompany.fopassignment;
 
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
 
 /**
@@ -13,7 +17,7 @@ import java.util.ArrayList;
 public class User {
     
     private String emailAddress, password, displayName;
-    private ArrayList<String> journals = new ArrayList<>();
+    private String[] journals;
 
     User(String emailAddress, String displayName, String password) {
         this.emailAddress = emailAddress;
@@ -42,11 +46,7 @@ public class User {
         }
         return cipherText.toString();
     }
-    
-    public void addJournal(String journalDate){
-        journals.add(journalDate);
-    }
-    
+        
     public String getDisplayName() {
         return displayName;
     }
@@ -59,7 +59,19 @@ public class User {
         return password;
     }
 
-    public ArrayList<String> getJournals() {
+    public String[] getJournals() {
+        try {
+            BufferedReader inputStream = new BufferedReader(new FileReader("Journal Entries\\%s\\Dates.txt".formatted(displayName)));
+            String line;
+            while ((line = inputStream.readLine()) != null){
+                String [] dates = line.split(", ");
+                journals = dates;
+            }
+        } catch (FileNotFoundException e){
+            System.out.println("File not found");
+        } catch (IOException e){
+            System.out.println("Something went wrong with reading date file");
+        }
         return journals;
     }
 }
