@@ -137,7 +137,7 @@ public class SignUp {
                         System.out.println("Folder created!");
                     } catch (IOException e) {
                         System.out.println("Error: " + e.getMessage());
-                    }
+                    } asfds
 
                     }else {
                     JOptionPane.showMessageDialog(null, "Failed to register user!");
