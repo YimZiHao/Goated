@@ -1,4 +1,4 @@
-package com.mycompany.UI;
+package com.mycompany.smartjournaling;
 
 import java.net.URL;
 import java.util.ResourceBundle;

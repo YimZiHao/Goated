@@ -1,4 +1,4 @@
-package com.mycompany.UI;
+package com.mycompany.smartjournaling;
 
 import java.io.IOException;
 import javafx.event.ActionEvent;
@@ -8,14 +8,12 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
-import javafx.scene.image.ImageView;
 import javafx.stage.Stage;
 
-public class PrimaryController {
+public class LoginController {
     @FXML
-    ImageView myBackground;
-    Button signupButton;
     Button loginButton;
+    Button backButton;
 
     @FXML
     private void switchScene(ActionEvent event, String fxmlFileName) throws IOException {
@@ -28,12 +26,12 @@ public class PrimaryController {
     }
     
     @FXML
-    private void switchtoSignupPage(ActionEvent event) throws IOException {
-        switchScene(event, "signup-page.fxml");
+    private void switchtoFirstPage(ActionEvent event) throws IOException {
+        switchScene(event, "first-page.fxml");
     }
     
     @FXML
-    private void switchtoLoginPage(ActionEvent event) throws IOException {
-        switchScene(event, "login-page.fxml");
+    private void switchtoWelcomePage(ActionEvent event) throws IOException {
+        switchScene(event, "welcome-page.fxml");
     }
 }

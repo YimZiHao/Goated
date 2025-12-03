@@ -1,4 +1,4 @@
-package com.mycompany.UI;
+package com.mycompany.smartjournaling;
 
 import java.io.IOException;
 import javafx.event.ActionEvent;
