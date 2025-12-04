@@ -43,7 +43,7 @@
             </Text>
             <HBox alignment="CENTER" prefHeight="42.0" prefWidth="1280.0">
                <children>
-                  <TextField fx:id="emailbox" prefHeight="31.0" prefWidth="398.0" promptText="SiswaMail">
+                  <TextField fx:id="emailField" prefHeight="31.0" prefWidth="398.0" promptText="SiswaMail">
                      <font>
                         <Font name="Bookshelf Symbol 7" size="21.0" />
                      </font>
@@ -52,7 +52,7 @@
             </HBox>
             <HBox alignment="CENTER" prefHeight="46.0" prefWidth="1280.0">
                <children>
-                  <PasswordField fx:id="password" prefHeight="31.0" prefWidth="398.0" promptText="Password">
+                  <PasswordField fx:id="passwordField" prefHeight="31.0" prefWidth="398.0" promptText="Password">
                      <font>
                         <Font name="Bookshelf Symbol 7" size="21.0" />
                      </font>
