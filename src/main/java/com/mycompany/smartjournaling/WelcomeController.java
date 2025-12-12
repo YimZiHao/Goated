@@ -1,12 +1,19 @@
 package com.mycompany.smartjournaling;
 
+import java.io.IOException;
 import java.net.URL;
+import javafx.util.Duration;
 import java.util.ResourceBundle;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Label;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import javafx.animation.PauseTransition;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.stage.Stage;
 
 public class WelcomeController implements Initializable {
 
@@ -18,6 +25,28 @@ public class WelcomeController implements Initializable {
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         updateGreeting("User");
+        
+        PauseTransition delay = new PauseTransition(Duration.seconds(5));
+        
+        delay.setOnFinished(event -> {
+            loadNextScene();
+        });
+        
+        delay.play();
+    }
+    
+    private void loadNextScene(){
+        try{
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("JournalPage.fxml"));
+            Parent root = loader.load();
+            
+            Stage stage = (Stage) welcomeLabel.getScene().getWindow();
+            stage.setScene(new Scene(root));
+            stage.show();
+        } catch (IOException e) {
+            System.out.println("Error loading the next scene.");
+            e.printStackTrace();
+        }
     }
 
     public void updateGreeting(String displayName) {
