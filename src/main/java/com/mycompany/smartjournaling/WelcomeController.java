@@ -2,18 +2,18 @@ package com.mycompany.smartjournaling;
 
 import java.io.IOException;
 import java.net.URL;
-import javafx.util.Duration;
 import java.util.ResourceBundle;
+import javafx.animation.PauseTransition; // 1. Import for the timer
 import javafx.fxml.FXML;
-import javafx.fxml.Initializable;
-import javafx.scene.control.Label;
-import java.time.LocalTime;
-import java.time.ZoneId;
-import javafx.animation.PauseTransition;
 import javafx.fxml.FXMLLoader;
+import javafx.fxml.Initializable;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Label;
 import javafx.stage.Stage;
+import javafx.util.Duration; // 2. Import for time duration
+import java.time.LocalTime;
+import java.time.ZoneId;
 
 public class WelcomeController implements Initializable {
 
@@ -22,34 +22,17 @@ public class WelcomeController implements Initializable {
     @FXML
     private Label welcomeLabel1;
 
+    // Variable to hold the name so we can pass it to the next page if needed
+    private String currentDisplayName; 
+
     @Override
     public void initialize(URL url, ResourceBundle rb) {
-        updateGreeting("User");
-        
-        PauseTransition delay = new PauseTransition(Duration.seconds(5));
-        
-        delay.setOnFinished(event -> {
-            loadNextScene();
-        });
-        
-        delay.play();
-    }
-    
-    private void loadNextScene(){
-        try{
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("JournalPage.fxml"));
-            Parent root = loader.load();
-            
-            Stage stage = (Stage) welcomeLabel.getScene().getWindow();
-            stage.setScene(new Scene(root));
-            stage.show();
-        } catch (IOException e) {
-            System.out.println("Error loading the next scene.");
-            e.printStackTrace();
-        }
+        // Standard initialization
     }
 
     public void updateGreeting(String displayName) {
+        this.currentDisplayName = displayName;
+
         ZoneId zone = ZoneId.of("GMT+8");
         LocalTime now = LocalTime.now(zone);
         int hour = now.getHour();
@@ -63,7 +46,46 @@ public class WelcomeController implements Initializable {
             greeting = "Good Evening";
         }
 
-        welcomeLabel.setText(greeting + ", " + displayName);
-        welcomeLabel1.setText(greeting + ", " + displayName);
+        // Update labels
+        if (welcomeLabel != null) welcomeLabel.setText(greeting + ", " + displayName);
+        if (welcomeLabel1 != null) welcomeLabel1.setText(greeting + ", " + displayName);
+
+        // 3. Start the timer immediately after updating the greeting
+        startTransitionTimer();
+    }
+
+    private void startTransitionTimer() {
+        // Create a 5-second pause
+        PauseTransition delay = new PauseTransition(Duration.seconds(5));
+        
+        // Define what happens when the 5 seconds represent up
+        delay.setOnFinished(event -> {
+            try {
+                switchToJournalPage();
+            } catch (IOException e) {
+                e.printStackTrace();
+                System.out.println("Could not load journal-page.fxml");
+            }
+        });
+        
+        // Start the timer
+        delay.play();
+    }
+
+    private void switchToJournalPage() throws IOException {
+        // Load the next FXML file (Make sure the name matches your file exactly!)
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("journal-page.fxml"));
+        Parent root = loader.load();
+
+        // OPTIONAL: Pass the username to the JournalController here if needed
+        // JournalController controller = loader.getController();
+        // controller.setUserName(currentDisplayName);
+
+        // Get the current window (Stage) using one of the labels
+        Stage stage = (Stage) welcomeLabel.getScene().getWindow();
+        Scene scene = new Scene(root);
+        
+        stage.setScene(scene);
+        stage.show();
     }
 }

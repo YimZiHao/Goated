@@ -65,11 +65,16 @@ public class SignupController {
         }
 
         // 1. Generate a Display Name from Email (since we don't have a name field yet)
-        String displayName;
+        String rawName;
         if (email.contains("@")) {
-            displayName = email.split("@")[0]; // Use the part before '@'
+            rawName = email.split("@")[0];
         } else {
-            displayName = email;
+            rawName = email;
+        }
+
+        String displayName = rawName;
+        if (rawName != null && !rawName.isEmpty()) {
+            displayName = rawName.substring(0, 1).toUpperCase() + rawName.substring(1);
         }
 
         // 2. Create the User Object
