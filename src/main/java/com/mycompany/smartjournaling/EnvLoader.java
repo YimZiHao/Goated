@@ -23,7 +23,7 @@ public class EnvLoader {
             
             while ((line = reader.readLine()) != null) {
                 // Skip empty lines or comments
-                line = line.trim();
+                line = line.trim(); 
                 if (line.isEmpty() || line.startsWith("#")) continue;
 
                 // Split on the first '=' only

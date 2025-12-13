@@ -5,90 +5,95 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.Map;
+import java.nio.charset.StandardCharsets;
+import java.util.Map; // Added this import
 
 public class API {
 
-    public String get(String apiURL) throws Exception {
-        URL url = new URL(apiURL);
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    // --- GET METHOD (Used for Weather) ---
+    public static String get(String urlString) {
+        StringBuilder response = new StringBuilder();
+        try {
+            URL url = new URL(urlString);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty("Accept", "application/json");
 
-        conn.setRequestMethod("GET");
-        conn.setRequestProperty("Accept", "application/json");
-
-        if (conn.getResponseCode() != 200) {
-            throw new RuntimeException("GET failed. HTTP error code: " + conn.getResponseCode());
+            int responseCode = conn.getResponseCode();
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                try (BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
+                    String line;
+                    while ((line = in.readLine()) != null) {
+                        response.append(line);
+                    }
+                }
+            } else {
+                System.out.println("GET Request Failed. Response Code: " + responseCode);
+                return "{}";
+            }
+        } catch (Exception e) {
+            System.out.println("Error in GET request: " + e.getMessage());
+            return "{}";
         }
-
-        BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-        StringBuilder sb = new StringBuilder();
-        String output;
-        while ((output = br.readLine()) != null) {
-            sb.append(output);
-        }
-
-        conn.disconnect();
-        return sb.toString();
+        return response.toString();
     }
 
-    public String post(String apiURL, String bearerToken, String jsonBody) throws Exception {
-        URL url = new URL(apiURL);
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-
-        conn.setRequestMethod("POST");
-        conn.setRequestProperty("Accept", "application/json");
-        conn.setRequestProperty("Content-Type", "application/json");
-        conn.setRequestProperty("Authorization", "Bearer " + bearerToken);
-
-        conn.setDoOutput(true);
-
-        try (OutputStream os = conn.getOutputStream()) {
-            byte[] input = jsonBody.getBytes("utf-8");
-            os.write(input, 0, input.length);
-        }
-
-        int responseCode = conn.getResponseCode();
-        if (responseCode != 200 && responseCode != 201) {
-            throw new RuntimeException("POST failed. HTTP error code: " + responseCode);
-        }
-
-        BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), "utf-8"));
-        StringBuilder sb = new StringBuilder();
-        String responseLine;
-        while ((responseLine = br.readLine()) != null) {
-            sb.append(responseLine.trim());
-        }
-
-        conn.disconnect();
-        return sb.toString();
-    }
-
-    public static void main(String[] args) {
-        API api = new API();
-
+    // --- POST METHOD (Used for Mood Analysis) ---
+    public static String post(String urlString, String jsonInputString) {
+        StringBuilder response = new StringBuilder();
+        
+        // --- CHANGED: Using your EnvLoader structure ---
+        // 1. Load the map from the .env file
         Map<String, String> env = EnvLoader.loadEnv(".env");
+        
+        // 2. Extract the specific token
+        String token = env.get("BEARER_TOKEN");
+        
+        if (token == null || token.isEmpty()) {
+            System.out.println("Error: BEARER_TOKEN not found in .env file.");
+            return "{}";
+        }
 
         try {
-            String getUrl = "https://api.data.gov.my/weather/forecast/?contains=WP%20Kuala%20Lumpur@location__location_name&sort=date&limit=1";
-            String getResponse = api.get(getUrl);
-            System.out.println("GET Response:\n" + getResponse);
+            URL url = new URL(urlString);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            
+            // Set Headers
+            conn.setRequestProperty("Authorization", "Bearer " + token); 
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setRequestProperty("Accept", "application/json");
+            conn.setDoOutput(true);
 
-            String journalInput = "I spent my free time with my friends today. We had a great time at the park and enjoyed the sunny weather.";
-            String postUrl = "https://router.huggingface.co/hf-inference/models/distilbert/distilbert-base-uncased-finetuned-sst-2-english";
-
-            String bearerToken = env.get("BEARER_TOKEN");
-            if (bearerToken == null || bearerToken.isEmpty()) {
-                System.err.println("Error: BEARER_TOKEN is not set in the environment.");
-                return;
+            // Send JSON Data
+            try (OutputStream os = conn.getOutputStream()) {
+                byte[] input = jsonInputString.getBytes(StandardCharsets.UTF_8);
+                os.write(input, 0, input.length);
             }
 
-            String jsonBody = "{\"inputs\": \"" + journalInput + "\"}";
-
-            String postResponse = api.post(postUrl, bearerToken, jsonBody);
-            System.out.println("\nSentiment Analysis Response:\n" + postResponse);
-
+            // Read Response
+            int responseCode = conn.getResponseCode();
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                try (BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
+                    String line;
+                    while ((line = in.readLine()) != null) {
+                        response.append(line);
+                    }
+                }
+            } else {
+                System.out.println("POST Request Failed. Response Code: " + responseCode);
+                try (BufferedReader errorReader = new BufferedReader(new InputStreamReader(conn.getErrorStream()))) {
+                    String line;
+                    while ((line = errorReader.readLine()) != null) {
+                        System.out.println("Error Details: " + line);
+                    }
+                }
+                return "{}";
+            }
         } catch (Exception e) {
-            e.printStackTrace();
+            System.out.println("Error in POST request: " + e.getMessage());
+            return "{}";
         }
+        return response.toString();
     }
 }
