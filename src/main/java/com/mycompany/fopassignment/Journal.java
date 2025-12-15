@@ -5,11 +5,14 @@
 package com.mycompany.fopassignment;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Scanner;
@@ -27,10 +30,11 @@ public class Journal {
 //        System.out.print("Press Enter to go back.\n>");
     }
     
-    public static void createJournal(User user, LocalDate date){
+    public static void createJournal(User user, LocalDate date, Connection connection){
         Scanner scanner = new Scanner(System.in);
         String fileName = "Journal Entries\\%s\\%s.txt".formatted(user.getDisplayName(), date);
         try {
+            //Write a journal entry
             PrintWriter outputStream = new PrintWriter(new FileOutputStream(fileName));
             
             System.out.printf("Enter your journal entry for %s:\n> ", date);
@@ -38,6 +42,48 @@ public class Journal {
             outputStream.print(entry);
             
             outputStream.close();
+            
+            //update Dates text file
+            try {
+                File dir = new File("Journal Entries/" + user.getDisplayName());
+                dir.mkdirs();   // creates parent folders if missing
+
+                File file = new File(dir, "Dates.txt");
+
+                outputStream = new PrintWriter(new FileOutputStream(file, true));
+                outputStream.printf("%s, ", date.toString());
+                outputStream.close();
+            } catch (IOException e) {
+                System.out.print("Something went wrong with updating Dates text file!");
+            }
+            
+            //update Dates in db
+            try {
+                fileName = "Journal Entries\\%s\\Dates.txt".formatted(user.getDisplayName());
+                BufferedReader inputStream = new BufferedReader(new FileReader(fileName));
+                String line = inputStream.readLine();
+                inputStream.close();
+                String updateDatesSQL = """
+                                    UPDATE goated.dates
+                                    SET Dates = ?
+                                    WHERE `Display Name` = ?;
+                                    """;
+                try (PreparedStatement pstmt = connection.prepareStatement(updateDatesSQL)){
+                    pstmt.setString(1, line);
+                    pstmt.setString(2, user.getDisplayName());
+                    
+                    int rowsAffected = pstmt.executeUpdate();
+                    
+                } catch (java.sql.SQLException e){
+                    System.out.println("Something went wrong when updating Dates file to db");
+                }
+                
+            } catch (FileNotFoundException e){
+                System.out.println("File not found");
+            } catch (IOException e){
+                System.out.println("Something went wrong with reading date file");
+            }
+
         } catch(IOException e){
             System.out.println("Something went wrong with creating journals");
         }
