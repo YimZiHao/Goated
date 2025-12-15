@@ -138,9 +138,6 @@ public class SignUp {
                     } catch (IOException e) {
                         System.out.println("Error: " + e.getMessage());
                     } 
-                    
-                    path = Path.of("Journal Entries\\%s\\Dates".formatted(user.getDisplayName()));
-                    try (){
 
                     }else {
                     JOptionPane.showMessageDialog(null, "Failed to register user!");
