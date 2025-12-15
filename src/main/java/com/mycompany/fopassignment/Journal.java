@@ -104,6 +104,8 @@ public class Journal {
     }
     
     public static String Date(User user){
+
+
         String[] journalEntries = user.getJournals();
         Scanner scanner = new Scanner(System.in);
         LocalDate today = LocalDate.now();
@@ -126,5 +128,6 @@ public class Journal {
         int date = scanner.nextInt() - 1;
         
         return journalEntries[date];
+
     }
 }
