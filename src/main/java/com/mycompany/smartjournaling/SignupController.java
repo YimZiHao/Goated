@@ -27,7 +27,7 @@ import javafx.stage.Stage;
 public class SignupController {
 
     // --- DATABASE CONFIGURATION ---
-    private final static String CONN_STRING = "jdbc:mysql://localhost:3306/goated";
+    private final static String CONN_STRING = "jdbc:mysql://localhost:3306/smart_journal";
     private final static String DB_USER = "root";     
     private final static String DB_PASSWORD = ""; // <--- WRITE YOUR DB PASSWORD HERE (Leave empty if none)
 
