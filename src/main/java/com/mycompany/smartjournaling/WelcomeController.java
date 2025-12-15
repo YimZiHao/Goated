@@ -47,8 +47,8 @@ public class WelcomeController implements Initializable {
         }
 
         // Update labels
-        if (welcomeLabel != null) welcomeLabel.setText(greeting + ", " + displayName);
-        if (welcomeLabel1 != null) welcomeLabel1.setText(greeting + ", " + displayName);
+        welcomeLabel.setText(greeting + ", " + displayName);
+        welcomeLabel1.setText(greeting + ", " + displayName);
 
         // 3. Start the timer immediately after updating the greeting
         startTransitionTimer();
@@ -56,7 +56,7 @@ public class WelcomeController implements Initializable {
 
     private void startTransitionTimer() {
         // Create a 5-second pause
-        PauseTransition delay = new PauseTransition(Duration.seconds(5));
+        PauseTransition delay = new PauseTransition(Duration.seconds(3));
         
         // Define what happens when the 5 seconds represent up
         delay.setOnFinished(event -> {

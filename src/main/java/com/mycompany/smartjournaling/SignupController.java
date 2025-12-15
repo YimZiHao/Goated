@@ -1,7 +1,7 @@
 package com.mycompany.smartjournaling;
 
-import com.mycompany.fopassignment.User; // IMPORT YOUR USER CLASS
-import com.mysql.cj.jdbc.MysqlDataSource; // IMPORT MYSQL LIBRARY
+import com.mycompany.fopassignment.User; // Ensure this matches where your User class is
+import com.mysql.cj.jdbc.MysqlDataSource;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -26,18 +26,18 @@ import javafx.stage.Stage;
 
 public class SignupController {
 
-    // --- DATABASE CONFIGURATION ---
+    // 1. UPDATED: Match the database name used in App.java ("goated")
     private final static String CONN_STRING = "jdbc:mysql://localhost:3306/smart_journal";
     private final static String DB_USER = "root";     
-    private final static String DB_PASSWORD = ""; // <--- WRITE YOUR DB PASSWORD HERE (Leave empty if none)
 
     @FXML
     Button signupButton;
+    @FXML
     Button backButton;
     @FXML
-    private TextField emailbox;
+    private TextField emailField;
     @FXML
-    private PasswordField password;
+    private PasswordField passwordField;
 
     @FXML
     private void switchScene(ActionEvent event, String fxmlFileName) throws IOException {
@@ -56,15 +56,15 @@ public class SignupController {
 
     @FXML
     private void switchtoWelcomePage(ActionEvent event) throws IOException {
-        String email = emailbox.getText();
-        String pass = password.getText();
+        String email = emailField.getText();
+        String pass = passwordField.getText();
 
         if (email.isEmpty() || pass.isEmpty()) {
             showAlert("Error", "Please fill in all fields.");
             return;
         }
 
-        // 1. Generate a Display Name from Email (since we don't have a name field yet)
+        // Generate Display Name from Email
         String rawName;
         if (email.contains("@")) {
             rawName = email.split("@")[0];
@@ -77,20 +77,20 @@ public class SignupController {
             displayName = rawName.substring(0, 1).toUpperCase() + rawName.substring(1);
         }
 
-        // 2. Create the User Object
-        // (The User class constructor automatically ciphers the password!)
+        // Create User Object
         User newUser = new User(email, displayName, pass);
 
-        // 3. Attempt to Register in Database
+        // Attempt Registration
         boolean success = registerUserInDB(newUser);
 
-        // 4. Only switch scene if registration was successful
+        // Only switch scene if successful
         if (success) {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("welcome-page.fxml"));
             Parent root = loader.load();
 
             WelcomeController welcomeController = loader.getController();
-            welcomeController.updateGreeting(displayName);
+            // Pass the email or name to the welcome page
+            welcomeController.updateGreeting(email);
 
             Stage stage = (Stage)((Node)event.getSource()).getScene().getWindow();
             Scene scene = new Scene(root);
@@ -99,12 +99,15 @@ public class SignupController {
         }
     }
 
-    // --- MERGED LOGIC FROM SignUp.java ---
     private boolean registerUserInDB(User user) {
         MysqlDataSource dataSource = new MysqlDataSource();
         dataSource.setURL(CONN_STRING);
         dataSource.setUser(DB_USER);
-        dataSource.setPassword(DB_PASSWORD);
+        
+        // --- CRITICAL FIX ---
+        // Use the password we saved in App.java!
+        dataSource.setPassword(App.dbPassword); 
+        // --------------------
 
         try (Connection connection = dataSource.getConnection()) {
             
@@ -136,13 +139,12 @@ public class SignupController {
             String insertSQL = "INSERT INTO user (`Email Address`, `Password`, `Display Name`) VALUES (?, ?, ?)";
             try (PreparedStatement insertStmt = connection.prepareStatement(insertSQL)) {
                 insertStmt.setString(1, user.getEmailAddress());
-                insertStmt.setString(2, user.getPassword()); // Ciphered password
+                insertStmt.setString(2, user.getPassword());
                 insertStmt.setString(3, user.getDisplayName());
 
                 int rows = insertStmt.executeUpdate();
 
                 if (rows > 0) {
-                    // Success! Create the files now
                     createFilesForUser(user);
                     showAlert("Success", "Account created successfully!");
                     return true;
@@ -158,8 +160,7 @@ public class SignupController {
     }
 
     private void createFilesForUser(User user) {
-        // 1. Append to UserData.txt
-        // I simplified the path to be in the project root folder so it works on all PCs
+        // Append to UserData.txt
         try (PrintWriter outputStream = new PrintWriter(new FileOutputStream("UserData.txt", true))) {
             outputStream.println(user.getEmailAddress());
             outputStream.println(user.getDisplayName());
@@ -168,12 +169,12 @@ public class SignupController {
             System.out.println("Error writing text file: " + e.getMessage());
         }
 
-        // 2. Create Journal Folders
+        // Create Journal Folders
         try {
+            // Using "Journal Entries" folder as root
             Path path = Path.of("Journal Entries", user.getDisplayName());
             Files.createDirectories(path);
             
-            // Create Dates.txt inside that folder
             File datesFile = new File(path.toFile(), "Dates.txt");
             datesFile.createNewFile();
             

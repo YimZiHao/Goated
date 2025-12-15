@@ -25,14 +25,14 @@ import javafx.stage.Stage;
 public class LoginController {
 
     // --- DATABASE CONFIGURATION ---
-    private final static String CONN_STRING = "jdbc:mysql://localhost:3306/goated";
+    // Ensure this matches App.java exactly ("smart_journal")
+    private final static String CONN_STRING = "jdbc:mysql://localhost:3306/smart_journal";
     private final static String DB_USER = "root";
-    private final static String DB_PASSWORD = ""; // Leave empty if you use XAMPP default
 
     @FXML
-    private TextField emailField;      // Must match fx:id in Scene Builder
+    private TextField emailField;      
     @FXML
-    private PasswordField passwordField; // Must match fx:id in Scene Builder
+    private PasswordField passwordField; 
     @FXML
     private Button loginButton;
     @FXML
@@ -67,8 +67,7 @@ public class LoginController {
         }
 
         // 2. ENCRYPT THE PASSWORD
-        // We use your teammate's User class to handle the math.
-        // We create a temp user just to generate the encrypted password string.
+        // Create temp user to generate the encrypted password string.
         User tempUser = new User(inputEmail, "dummyName", inputPass);
         String encryptedPassword = tempUser.getPassword(); 
 
@@ -78,15 +77,13 @@ public class LoginController {
         if (displayName != null) {
             // LOGIN SUCCESS!
             
-            // Load the welcome page so we can pass the username to it
             FXMLLoader loader = new FXMLLoader(getClass().getResource("welcome-page.fxml"));
             Parent root = loader.load();
 
             // Pass the user's name to the WelcomeController
             WelcomeController welcomeController = loader.getController();
-            welcomeController.updateGreeting(displayName);
+            welcomeController.updateGreeting(displayName); // Use the real name from DB
 
-            // Show the welcome screen
             Stage stage = (Stage)((Node)event.getSource()).getScene().getWindow();
             Scene scene = new Scene(root);
             stage.setScene(scene);
@@ -103,9 +100,12 @@ public class LoginController {
         MysqlDataSource dataSource = new MysqlDataSource();
         dataSource.setURL(CONN_STRING);
         dataSource.setUser(DB_USER);
-        dataSource.setPassword(DB_PASSWORD);
+        
+        // --- CRITICAL FIX ---
+        // Use the password stored in App.java!
+        dataSource.setPassword(App.dbPassword);
+        // --------------------
 
-        // Query: Find a user with THIS email and THIS encrypted password
         String query = "SELECT `Display Name` FROM user WHERE `Email Address` = ? AND `Password` = ?";
 
         try (Connection connection = dataSource.getConnection();
@@ -116,7 +116,7 @@ public class LoginController {
 
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    // If we found a match, return the Display Name
+                    // Return the Display Name found in the database
                     return rs.getString("Display Name");
                 }
             }

@@ -19,12 +19,12 @@
          <children>
             <AnchorPane prefHeight="200.0" prefWidth="200.0" StackPane.alignment="CENTER">
                <children>
-                  <Label fx:id="welcomeLabel" layoutX="649.0" layoutY="436.0" onDragDetected="#initialize" prefHeight="66.0" prefWidth="19.0">
+                  <Label fx:id="welcomeLabel" alignment="CENTER" layoutX="240.0" layoutY="436.0" prefHeight="66.0" prefWidth="800.0" textFill="#364fab">
                      <font>
                         <Font name="Book Antiqua" size="52.0" />
                      </font>
                   </Label>
-                  <Label fx:id="welcomeLabel1" layoutX="649.0" layoutY="436.0" onDragDetected="#initialize" prefHeight="67.0" prefWidth="38.0" textFill="#d9d2d2">
+                  <Label fx:id="welcomeLabel1" alignment="CENTER" layoutX="240.0" layoutY="436.0" prefHeight="67.0" prefWidth="800.0" textFill="#d9d2d2">
                      <font>
                         <Font name="Book Antiqua" size="53.0" />
                      </font>
