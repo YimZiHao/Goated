@@ -19,7 +19,7 @@ public class User {
     private String emailAddress, password, displayName;
     private String[] journals;
 
-    User(String emailAddress, String displayName, String password) {
+    public User(String emailAddress, String displayName, String password) {
         this.emailAddress = emailAddress;
         this.displayName = displayName;
         this.password = cipher(password);

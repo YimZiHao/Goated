@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.effect.GaussianBlur?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.text.Font?>
+
+<StackPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="800.0" prefWidth="1280.0" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.mycompany.smartjournaling.WelcomeController">
+   <children>
+      <ImageView fx:id="myBackground" fitHeight="800.0" fitWidth="1280.0" pickOnBounds="true" preserveRatio="true">
+         <image>
+            <Image url="@../../../images-elements/myBackground.png" />
+         </image>
+      </ImageView>
+      <StackPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="800.0" prefWidth="1280.0" StackPane.alignment="CENTER">
+         <children>
+            <AnchorPane prefHeight="200.0" prefWidth="200.0" StackPane.alignment="CENTER">
+               <children>
+                  <Label fx:id="welcomeLabel" layoutX="649.0" layoutY="436.0" onDragDetected="#initialize" prefHeight="66.0" prefWidth="19.0">
+                     <font>
+                        <Font name="Book Antiqua" size="52.0" />
+                     </font>
+                  </Label>
+                  <Label fx:id="welcomeLabel1" layoutX="649.0" layoutY="436.0" onDragDetected="#initialize" prefHeight="67.0" prefWidth="38.0" textFill="#d9d2d2">
+                     <font>
+                        <Font name="Book Antiqua" size="53.0" />
+                     </font>
+                     <effect>
+                        <GaussianBlur />
+                     </effect>
+                  </Label>
+               </children>
+            </AnchorPane>
+         </children>
+      </StackPane>
+   </children>
+</StackPane>
