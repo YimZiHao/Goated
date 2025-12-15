@@ -76,7 +76,7 @@ public class LoginController {
 
         if (displayName != null) {
             // LOGIN SUCCESS!
-            
+            UserSession.setCurrentUser(inputEmail); // variable 'inputEmail' already holds the typed email
             FXMLLoader loader = new FXMLLoader(getClass().getResource("welcome-page.fxml"));
             Parent root = loader.load();
 

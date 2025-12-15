@@ -1,10 +1,2 @@
-2025-12-15;N/A;N/A;I am testing the API!
-2025-12-15;N/A;N/A;I am happy!
-2025-12-15;N/A;N/A;I am happy!
-2025-12-15;N/A;N/A;I am happy!
-2025-12-15;N/A;POSITIVE;I am happy!
-2025-12-15;N/A;POSITIVE;I am happy!!!
-2025-12-15;N/A;POSITIVE;I am happy
-2025-12-15;N/A;POSITIVE;I am happy
-2025-12-15;N/A;POSITIVE;I am happy
-2025-12-15;N/A;POSITIVE;I am happy
+ainimastura@mail.com;2025-12-15;N/A;POSITIVE;I am happy
+ad@mail.com;2025-12-15;N/A;NEGATIVE;I am sad

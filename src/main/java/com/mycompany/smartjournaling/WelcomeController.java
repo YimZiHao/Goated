@@ -48,7 +48,6 @@ public class WelcomeController implements Initializable {
 
         // Update labels
         welcomeLabel.setText(greeting + ", " + displayName);
-        welcomeLabel1.setText(greeting + ", " + displayName);
 
         // 3. Start the timer immediately after updating the greeting
         startTransitionTimer();
