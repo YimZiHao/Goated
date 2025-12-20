@@ -14,6 +14,11 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Optional;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.Dialog;
+import javafx.scene.control.PasswordField;
+import javafx.scene.layout.VBox;
 
 public class App extends Application {
 
@@ -38,42 +43,58 @@ public class App extends Application {
         stage.show();
     }
 
-    // --- Helper Method to Prompt for Password ---
+    // --- Helper Method to Prompt for Password (MASKED) ---
     private boolean connectToDatabase() {
-        // Create a popup dialog asking for input
-        TextInputDialog dialog = new TextInputDialog();
+        // 1. Create a custom Dialog instead of TextInputDialog
+        Dialog<String> dialog = new Dialog<>();
         dialog.setTitle("Database Authentication");
         dialog.setHeaderText("Database Connection Required");
-        dialog.setContentText("Please enter the DB Password:");
 
-        // Show the dialog and wait for the user to press OK/Cancel
+        // 2. Set the button types (OK and Cancel)
+        ButtonType loginButtonType = new ButtonType("OK", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(loginButtonType, ButtonType.CANCEL);
+
+        // 3. Create the PasswordField
+        PasswordField passwordField = new PasswordField();
+        passwordField.setPromptText("Password");
+
+        // 4. Layout the password field
+        VBox content = new VBox();
+        content.getChildren().add(passwordField);
+        dialog.getDialogPane().setContent(content);
+
+        // 5. Convert the result to the password string when OK is clicked
+        dialog.setResultConverter(dialogButton -> {
+            if (dialogButton == loginButtonType) {
+                return passwordField.getText();
+            }
+            return null;
+        });
+
+        // 6. Show the dialog and handle the result
         Optional<String> result = dialog.showAndWait();
 
         if (result.isPresent()) {
             String inputPassword = result.get();
-            
-            // Attempt to connect to MySQL
+
             MysqlDataSource dataSource = new MysqlDataSource();
             dataSource.setURL(CONN_STRING);
             dataSource.setUser("root");
             dataSource.setPassword(inputPassword);
 
             try (Connection conn = dataSource.getConnection()) {
-                // Connection Successful!
-                dbPassword = inputPassword; // Store it for later use
+                dbPassword = inputPassword; 
                 System.out.println("Database connected successfully.");
                 return true; 
             } catch (SQLException e) {
-                // Connection Failed - Show Error Alert
                 Alert alert = new Alert(AlertType.ERROR);
                 alert.setTitle("Connection Failed");
-                alert.setHeaderText("Could not connect to 'smart_journal' database");
+                alert.setHeaderText("Could not connect to database");
                 alert.setContentText(e.getMessage());
                 alert.showAndWait();
                 return false;
             }
         }
-        // User clicked Cancel
         return false; 
     }
 
