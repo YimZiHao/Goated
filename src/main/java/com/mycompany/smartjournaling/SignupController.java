@@ -33,6 +33,21 @@ public class SignupController {
     @FXML private PasswordField passwordField;
 
     @FXML
+    private void switchScene(ActionEvent event, String fxmlFileName) throws IOException {
+        FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlFileName));
+        Parent root = loader.load();
+        Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+        Scene scene = new Scene(root);
+        stage.setScene(scene);
+        stage.show();
+    }
+
+    @FXML
+    private void switchtoFirstPage(ActionEvent event) throws IOException {
+        switchScene(event, "first-page.fxml");
+    }
+    
+    @FXML
     private void switchtoWelcomePage(ActionEvent event) throws IOException {
 
         String email = emailField.getText().trim();
@@ -93,6 +108,17 @@ public class SignupController {
                 ps.setString(2, user.getPassword());
                 ps.setString(3, user.getDisplayName());
                 ps.executeUpdate();
+            }
+            
+            //Write new user into UserData.txt
+            try {
+                PrintWriter outputStream = new PrintWriter(new FileOutputStream("src\\main\\java\\com\\mycompany\\fopassignment\\UserData.txt", true));
+                outputStream.println(user.getEmailAddress());
+                outputStream.println(user.getDisplayName());
+                outputStream.println(user.getPassword() + "\n");
+                outputStream.close();
+            } catch (IOException e) {
+                System.out.print("Something went wrong with output!!!");
             }
 
             createUserFiles(user);

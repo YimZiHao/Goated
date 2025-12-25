@@ -26,7 +26,22 @@ public class LoginController {
 
     @FXML private TextField emailField;
     @FXML private PasswordField passwordField;
-
+    
+    @FXML
+    private void switchScene(ActionEvent event, String fxmlFileName) throws IOException {
+        FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlFileName));
+        Parent root = loader.load();
+        Stage stage = (Stage)((Node)event.getSource()).getScene().getWindow();
+        Scene scene = new Scene(root);
+        stage.setScene(scene);
+        stage.show();
+    }
+    
+    @FXML
+    private void switchtoFirstPage(ActionEvent event) throws IOException {
+        switchScene(event, "first-page.fxml");
+    }
+    
     @FXML
     private void switchtoWelcomePage(ActionEvent event) throws IOException {
 
@@ -41,6 +56,7 @@ public class LoginController {
         // 🔐 Encrypt explicitly
         String encryptedPassword = User.cipher(rawPassword);
         String displayName = validateLogin(email, encryptedPassword);
+        System.out.println(encryptedPassword);
 
         if (displayName != null) {
 
