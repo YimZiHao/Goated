@@ -1,6 +1,6 @@
 package com.mycompany.smartjournaling;
 
-import com.mycompany.fopassignment.User; // Ensure this matches where your User class is
+import com.mycompany.fopassignment.User;
 import com.mysql.cj.jdbc.MysqlDataSource;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -19,175 +19,116 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
-import javafx.scene.control.Button;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 
 public class SignupController {
 
-    // 1. UPDATED: Match the database name used in App.java ("goated")
-    private final static String CONN_STRING = "jdbc:mysql://localhost:3306/smart_journal";
-    private final static String DB_USER = "root";     
+    private static final String CONN_STRING =
+            "jdbc:mysql://localhost:3306/smart_journal";
+    private static final String DB_USER = "root";
 
-    @FXML
-    Button signupButton;
-    @FXML
-    Button backButton;
-    @FXML
-    private TextField emailField;
-    @FXML
-    private PasswordField passwordField;
-
-    @FXML
-    private void switchScene(ActionEvent event, String fxmlFileName) throws IOException {
-        FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlFileName));
-        Parent root = loader.load();
-        Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-        Scene scene = new Scene(root);
-        stage.setScene(scene);
-        stage.show();
-    }
-
-    @FXML
-    private void switchtoFirstPage(ActionEvent event) throws IOException {
-        switchScene(event, "first-page.fxml");
-    }
+    @FXML private TextField emailField;
+    @FXML private PasswordField passwordField;
 
     @FXML
     private void switchtoWelcomePage(ActionEvent event) throws IOException {
-        String email = emailField.getText();
-        String pass = passwordField.getText();
 
-        if (email.isEmpty() || pass.isEmpty()) {
+        String email = emailField.getText().trim();
+        String rawPassword = passwordField.getText().trim();
+
+        if (email.isEmpty() || rawPassword.isEmpty()) {
             showAlert("Error", "Please fill in all fields.");
             return;
         }
 
-        // Generate Display Name from Email
-        String rawName;
-        if (email.contains("@")) {
-            rawName = email.split("@")[0];
-        } else {
-            rawName = email;
-        }
+        String rawName = email.split("@")[0];
+        String displayName =
+                rawName.substring(0, 1).toUpperCase() + rawName.substring(1);
 
-        String displayName = rawName;
-        if (rawName != null && !rawName.isEmpty()) {
-            displayName = rawName.substring(0, 1).toUpperCase() + rawName.substring(1);
-        }
+        // 🔐 Encrypt explicitly
+        String encryptedPassword = User.cipher(rawPassword);
+        User newUser = new User(email, displayName, encryptedPassword);
 
-        // Create User Object
-        User newUser = new User(email, displayName, pass);
-
-        // Attempt Registration
-        boolean success = registerUserInDB(newUser);
-
-        // Only switch scene if successful
-        if (success) {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("welcome-page.fxml"));
+        if (registerUserInDB(newUser)) {
+            FXMLLoader loader =
+                    new FXMLLoader(getClass().getResource("welcome-page.fxml"));
             Parent root = loader.load();
 
-            WelcomeController welcomeController = loader.getController();
-            // Pass the email or name to the welcome page
-            welcomeController.updateGreeting(email);
+            WelcomeController controller = loader.getController();
+            controller.updateGreeting(displayName);
 
-            Stage stage = (Stage)((Node)event.getSource()).getScene().getWindow();
-            Scene scene = new Scene(root);
-            stage.setScene(scene);
+            Stage stage =
+                    (Stage) ((Node) event.getSource()).getScene().getWindow();
+            stage.setScene(new Scene(root));
             stage.show();
         }
     }
 
     private boolean registerUserInDB(User user) {
+
         MysqlDataSource dataSource = new MysqlDataSource();
         dataSource.setURL(CONN_STRING);
         dataSource.setUser(DB_USER);
-        
-        // --- CRITICAL FIX ---
-        // Use the password we saved in App.java!
-        dataSource.setPassword(App.dbPassword); 
-        // --------------------
+        dataSource.setPassword(App.dbPassword);
 
-        try (Connection connection = dataSource.getConnection()) {
-            
-            // Check if Name Exists
-            String checkNameSQL = "SELECT COUNT(*) FROM user WHERE `Display Name` = ?";
-            try (PreparedStatement checkStmt = connection.prepareStatement(checkNameSQL)) {
-                checkStmt.setString(1, user.getDisplayName());
-                try (ResultSet rs = checkStmt.executeQuery()) {
-                    if (rs.next() && rs.getInt(1) > 0) {
-                        showAlert("Registration Failed", "Display Name already taken!");
-                        return false;
-                    }
+        try (Connection conn = dataSource.getConnection()) {
+
+            String checkEmail =
+                    "SELECT COUNT(*) FROM user WHERE `Email Address`=?";
+            try (PreparedStatement ps = conn.prepareStatement(checkEmail)) {
+                ps.setString(1, user.getEmailAddress());
+                ResultSet rs = ps.executeQuery();
+                if (rs.next() && rs.getInt(1) > 0) {
+                    showAlert("Error", "Email already exists.");
+                    return false;
                 }
             }
 
-            // Check if Email Exists
-            String checkEmailSQL = "SELECT COUNT(*) FROM user WHERE `Email Address` = ?";
-            try (PreparedStatement checkStmt = connection.prepareStatement(checkEmailSQL)) {
-                checkStmt.setString(1, user.getEmailAddress());
-                try (ResultSet rs = checkStmt.executeQuery()) {
-                    if (rs.next() && rs.getInt(1) > 0) {
-                        showAlert("Registration Failed", "Email already exists!");
-                        return false;
-                    }
-                }
+            String insert =
+                    "INSERT INTO user (`Email Address`,`Password`,`Display Name`) VALUES (?,?,?)";
+            try (PreparedStatement ps = conn.prepareStatement(insert)) {
+                ps.setString(1, user.getEmailAddress());
+                ps.setString(2, user.getPassword());
+                ps.setString(3, user.getDisplayName());
+                ps.executeUpdate();
             }
 
-            // Insert User
-            String insertSQL = "INSERT INTO user (`Email Address`, `Password`, `Display Name`) VALUES (?, ?, ?)";
-            try (PreparedStatement insertStmt = connection.prepareStatement(insertSQL)) {
-                insertStmt.setString(1, user.getEmailAddress());
-                insertStmt.setString(2, user.getPassword());
-                insertStmt.setString(3, user.getDisplayName());
-
-                int rows = insertStmt.executeUpdate();
-
-                if (rows > 0) {
-                    createFilesForUser(user);
-                    showAlert("Success", "Account created successfully!");
-                    return true;
-                }
-            }
+            createUserFiles(user);
+            showAlert("Success", "Account created!");
+            return true;
 
         } catch (SQLException e) {
-            e.printStackTrace();
-            showAlert("Database Error", "Connection failed: " + e.getMessage());
+            showAlert("DB Error", e.getMessage());
             return false;
         }
-        return false;
     }
 
-    private void createFilesForUser(User user) {
-        // Append to UserData.txt
-        try (PrintWriter outputStream = new PrintWriter(new FileOutputStream("UserData.txt", true))) {
-            outputStream.println(user.getEmailAddress());
-            outputStream.println(user.getDisplayName());
-            outputStream.println(user.getPassword() + "\n");
-        } catch (IOException e) {
-            System.out.println("Error writing text file: " + e.getMessage());
-        }
-
-        // Create Journal Folders
+    private void createUserFiles(User user) {
         try {
-            // Using "Journal Entries" folder as root
-            Path path = Path.of("Journal Entries", user.getDisplayName());
+            Path path =
+                    Path.of("Journal Entries", user.getDisplayName());
             Files.createDirectories(path);
-            
-            File datesFile = new File(path.toFile(), "Dates.txt");
-            datesFile.createNewFile();
-            
+            new File(path.toFile(), "Dates.txt").createNewFile();
+
+            try (PrintWriter out =
+                         new PrintWriter(new FileOutputStream("UserData.txt", true))) {
+                out.println(user.getEmailAddress());
+                out.println(user.getDisplayName());
+                out.println(user.getPassword());
+                out.println();
+            }
         } catch (IOException e) {
-            System.out.println("Error creating folders: " + e.getMessage());
+            System.out.println("File creation failed.");
         }
     }
 
-    private void showAlert(String title, String message) {
+    private void showAlert(String title, String msg) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle(title);
         alert.setHeaderText(null);
-        alert.setContentText(message);
+        alert.setContentText(msg);
         alert.showAndWait();
     }
 }
