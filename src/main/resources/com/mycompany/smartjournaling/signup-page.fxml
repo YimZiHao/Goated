@@ -32,6 +32,15 @@
                         </TextField>
                      </children>
                   </HBox>
+                  <HBox alignment="CENTER" prefHeight="50.0" prefWidth="1280.0">
+                     <children>
+                        <TextField fx:id="nameField" prefHeight="37.0" prefWidth="469.0" promptText="Name">
+                           <font>
+                              <Font name="Bookshelf Symbol 7" size="21.0" />
+                           </font>
+                        </TextField>
+                     </children>
+                  </HBox>
                   <HBox alignment="CENTER" prefHeight="46.0" prefWidth="1280.0">
                      <children>
                         <PasswordField fx:id="passwordField" prefHeight="37.0" prefWidth="469.0" promptText="Password">

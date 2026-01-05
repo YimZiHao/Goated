@@ -2,12 +2,14 @@ package com.mycompany.smartjournaling;
 
 import java.io.*;
 import java.net.URL;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.ResourceBundle;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -23,6 +25,7 @@ public class JournalPageController implements Initializable {
     @FXML private Label dateLabel; 
     @FXML private Label weatherLabel;
     @FXML private Label moodLabel;
+    @FXML private Label displayName; // Make sure your FXML label has fx:id="displayName"
     @FXML private TextArea journaltextArea; 
     @FXML private Button saveButton;
     @FXML private Button deleteButton; 
@@ -32,18 +35,23 @@ public class JournalPageController implements Initializable {
     private final String TODAY_LABEL = LocalDate.now().toString() + " (Today)";
     private final String WEATHER_API_URL = "https://api.data.gov.my/weather/forecast?contains=Lumpur";
     private final String MOOD_API_URL = "https://router.huggingface.co/hf-inference/models/distilbert/distilbert-base-uncased-finetuned-sst-2-english";
-    private final String DATA_FILE = "journal_data.txt";
     
-    // NEW: Get the logged-in user's email
+    // NEW: We use a folder instead of one big file
+    private final String ROOT_DIR = "JournalEntries";
+
+    // Get the logged-in user's email
     private String currentUser = UserSession.getCurrentUser();
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
-        // Fallback for testing if you ran the page directly without login
         if (currentUser == null) currentUser = "test_user"; 
+        
+        // 1. FETCH REAL NAME from DB for the Welcome Message
+        String realName = getUserNameFromDB(currentUser);
+        displayName.setText("Welcome, " + realName);
 
         loadDates();
-        
+
         // Styling
         journaltextArea.setStyle("-fx-control-inner-background: rgba(255, 255, 255, 0.7); " +
                                  "-fx-font-family: 'Book Antiqua'; " +
@@ -64,13 +72,37 @@ public class JournalPageController implements Initializable {
                 String cleanDate = cleanDate(dateLabel.getText());
                 String weather = weatherLabel.getText().replace("Weather: ", "");
                 String mood = moodLabel.getText().replace("Mood: ", "");
-                saveOrUpdateFile(cleanDate, weather, mood, journaltextArea.getText());
+                saveToFolder(cleanDate, weather, mood, journaltextArea.getText());
                 statusLabel.setText("Entry Updated.");
             }
         });
 
         // DELETE BUTTON
         deleteButton.setOnAction(event -> deleteCurrentEntry());
+    }
+
+    // --- HELPER: Get Name from DB ---
+    // --- HELPER: Get Name from DB ---
+    private String getUserNameFromDB(String email) {
+        String name = "User";
+        
+        // UPDATED QUERY: Table is 'user', Column is 'Display Name', User ID is 'Email Address'
+        String query = "SELECT `Display Name` FROM user WHERE `Email Address` = ?"; 
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            
+            stmt.setString(1, email);
+            ResultSet rs = stmt.executeQuery();
+            
+            if (rs.next()) {
+                name = rs.getString("Display Name"); // Match the column name exactly
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            if (email.contains("@")) name = email.split("@")[0];
+        }
+        return name;
     }
 
     private void loadDates() {
@@ -91,19 +123,19 @@ public class JournalPageController implements Initializable {
         statusLabel.setText(""); 
         String dateOnly = cleanDate(selectedDateLabel);
 
-        // LOAD: Only look for data belonging to 'currentUser'
-        String[] savedData = loadFromFile(dateOnly);
+        // LOAD FROM FOLDER
+        String[] savedData = loadFromFolder(dateOnly);
 
         if (savedData != null) {
-            // Found MY entry -> Edit Mode
-            weatherLabel.setText("Weather: " + savedData[2]); 
-            moodLabel.setText("Mood: " + savedData[3]);
-            journaltextArea.setText(savedData[4]);
+            // Found File -> Edit Mode
+            weatherLabel.setText("Weather: " + savedData[0]); 
+            moodLabel.setText("Mood: " + savedData[1]);
+            journaltextArea.setText(savedData[2]);
             
             saveButton.setText("Update Entry"); 
             deleteButton.setVisible(true); 
         } else {
-            // New Entry -> Create Mode
+            // No File -> Create Mode
             journaltextArea.setText("");
             deleteButton.setVisible(false);
             saveButton.setText("Save Entry");
@@ -121,37 +153,27 @@ public class JournalPageController implements Initializable {
         saveButton.setVisible(true);
     }
 
-    // --- UPSERT (User Specific) ---
-    private void saveOrUpdateFile(String targetDate, String weather, String mood, String text) {
-        String sanitizedText = text.replace("\n", "||"); 
-        
-        // NEW FORMAT: User;Date;Weather;Mood;Text
-        String newRecord = currentUser + ";" + targetDate + ";" + weather + ";" + mood + ";" + sanitizedText;
-        
-        List<String> allLines = new ArrayList<>();
-        boolean found = false;
+    // --- FOLDER SYSTEM: SAVE ---
+    private void saveToFolder(String targetDate, String weather, String mood, String text) {
+        // Path: JournalEntries / user@email.com /
+        File userFolder = new File(ROOT_DIR + File.separator + currentUser);
+        if (!userFolder.exists()) {
+            userFolder.mkdirs(); 
+        }
 
-        try (BufferedReader reader = new BufferedReader(new FileReader(DATA_FILE))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String[] parts = line.split(";", 5);
-                
-                // Match BOTH User AND Date to find the line to replace
-                if (parts.length >= 2 && 
-                    parts[0].equals(currentUser) && 
-                    parts[1].trim().equals(targetDate.trim())) {
-                    
-                    allLines.add(newRecord); // Replace my old entry
-                    found = true;
-                } else {
-                    allLines.add(line); // Keep everyone else's entries
-                }
-            }
-        } catch (IOException e) {}
+        // File: 2025-12-30.txt
+        File entryFile = new File(userFolder, targetDate + ".txt");
 
-        if (!found) allLines.add(newRecord);
-
-        rewriteFile(allLines);
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(entryFile))) {
+            writer.write(weather);
+            writer.newLine();
+            writer.write(mood);
+            writer.newLine();
+            writer.write(text); 
+        } catch (IOException e) {
+            statusLabel.setText("Save Failed!");
+            e.printStackTrace();
+        }
         
         Platform.runLater(() -> {
              saveButton.setText("Update Entry");
@@ -159,29 +181,31 @@ public class JournalPageController implements Initializable {
         });
     }
 
-    // --- DELETE (User Specific) ---
+    // --- FOLDER SYSTEM: LOAD ---
+    private String[] loadFromFolder(String dateToFind) {
+        File entryFile = new File(ROOT_DIR + File.separator + currentUser, dateToFind + ".txt");
+
+        if (entryFile.exists()) {
+            try (BufferedReader reader = new BufferedReader(new FileReader(entryFile))) {
+                String weather = reader.readLine();
+                String mood = reader.readLine();
+                String text = reader.lines().collect(Collectors.joining("\n"));
+                return new String[]{weather, mood, text};
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return null; 
+    }
+
+    // --- FOLDER SYSTEM: DELETE ---
     private void deleteCurrentEntry() {
         String targetDate = cleanDate(dateLabel.getText());
-        List<String> allLines = new ArrayList<>();
+        File entryFile = new File(ROOT_DIR + File.separator + currentUser, targetDate + ".txt");
 
-        try (BufferedReader reader = new BufferedReader(new FileReader(DATA_FILE))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String[] parts = line.split(";", 5);
-                
-                // Only delete if it matches MY user AND the selected date
-                boolean isMyEntry = parts.length >= 2 && parts[0].equals(currentUser);
-                boolean isTargetDate = parts.length >= 2 && parts[1].trim().equals(targetDate.trim());
-                
-                if (isMyEntry && isTargetDate) {
-                    // Skip (Delete) this line
-                } else {
-                    allLines.add(line); // Keep everything else
-                }
-            }
-        } catch (IOException e) { e.printStackTrace(); }
-
-        rewriteFile(allLines);
+        if (entryFile.exists()) {
+            entryFile.delete(); 
+        }
         
         // Reset UI
         journaltextArea.setText("");
@@ -192,17 +216,6 @@ public class JournalPageController implements Initializable {
         deleteButton.setVisible(false);   
         
         if (dateLabel.getText().equals(TODAY_LABEL)) fetchWeatherOnly();
-    }
-
-    private void rewriteFile(List<String> lines) {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(DATA_FILE))) {
-            for (String line : lines) {
-                writer.write(line);
-                writer.newLine();
-            }
-        } catch (IOException e) {
-            statusLabel.setText("File Error!");
-        }
     }
 
     // --- API LOGIC (Unchanged) ---
@@ -255,29 +268,9 @@ public class JournalPageController implements Initializable {
                 saveButton.setDisable(false);
                 
                 String todayDate = LocalDate.now().toString();
-                saveOrUpdateFile(todayDate, fWeather, fMood, journalText);
+                saveToFolder(todayDate, fWeather, fMood, journalText);
             });
         }).start();
-    }
-
-    // --- LOAD (User Specific) ---
-    private String[] loadFromFile(String dateToFind) {
-        try (BufferedReader reader = new BufferedReader(new FileReader(DATA_FILE))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String[] parts = line.split(";", 5); // Now expecting 5 columns
-                
-                // Match User AND Date
-                if (parts.length >= 5 && 
-                    parts[0].equals(currentUser) && 
-                    parts[1].trim().equals(dateToFind.trim())) {
-                    
-                    parts[4] = parts[4].replace("||", "\n");
-                    return parts;
-                }
-            }
-        } catch (IOException e) {}
-        return null;
     }
 
     private String extractValue(String jsonResponse, String key) {

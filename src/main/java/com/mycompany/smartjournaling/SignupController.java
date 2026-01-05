@@ -1,8 +1,7 @@
 package com.mycompany.smartjournaling;
 
-import com.mycompany.fopassignment.User; // Ensure this matches where your User class is
+import com.mycompany.fopassignment.User; 
 import com.mysql.cj.jdbc.MysqlDataSource;
-import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -26,18 +25,16 @@ import javafx.stage.Stage;
 
 public class SignupController {
 
-    // 1. UPDATED: Match the database name used in App.java ("goated")
     private final static String CONN_STRING = "jdbc:mysql://localhost:3306/smart_journal";
     private final static String DB_USER = "root";     
 
-    @FXML
-    Button signupButton;
-    @FXML
-    Button backButton;
-    @FXML
-    private TextField emailField;
-    @FXML
-    private PasswordField passwordField;
+    @FXML Button signupButton;
+    @FXML Button backButton;
+    
+    // NEW: Field for the user to type their name
+    @FXML private TextField nameField; 
+    @FXML private TextField emailField;
+    @FXML private PasswordField passwordField;
 
     @FXML
     private void switchScene(ActionEvent event, String fxmlFileName) throws IOException {
@@ -56,41 +53,30 @@ public class SignupController {
 
     @FXML
     private void switchtoWelcomePage(ActionEvent event) throws IOException {
+        // 1. Get Manual Input
+        String displayName = nameField.getText();
         String email = emailField.getText();
         String pass = passwordField.getText();
 
-        if (email.isEmpty() || pass.isEmpty()) {
-            showAlert("Error", "Please fill in all fields.");
+        // 2. Validate
+        if (displayName.isEmpty() || email.isEmpty() || pass.isEmpty()) {
+            showAlert("Error", "Please fill in all fields (Name, Email, Password).");
             return;
         }
 
-        // Generate Display Name from Email
-        String rawName;
-        if (email.contains("@")) {
-            rawName = email.split("@")[0];
-        } else {
-            rawName = email;
-        }
-
-        String displayName = rawName;
-        if (rawName != null && !rawName.isEmpty()) {
-            displayName = rawName.substring(0, 1).toUpperCase() + rawName.substring(1);
-        }
-
-        // Create User Object
+        // 3. Create User Object
         User newUser = new User(email, displayName, pass);
 
-        // Attempt Registration
+        // 4. Attempt Registration
         boolean success = registerUserInDB(newUser);
 
-        // Only switch scene if successful
+        // 5. Switch Scene if successful
         if (success) {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("welcome-page.fxml"));
             Parent root = loader.load();
 
             WelcomeController welcomeController = loader.getController();
-            // Pass the email or name to the welcome page
-            welcomeController.updateGreeting(email);
+            welcomeController.updateGreeting(displayName);
 
             Stage stage = (Stage)((Node)event.getSource()).getScene().getWindow();
             Scene scene = new Scene(root);
@@ -100,42 +86,32 @@ public class SignupController {
     }
 
     private boolean registerUserInDB(User user) {
-        MysqlDataSource dataSource = new MysqlDataSource();
-        dataSource.setURL(CONN_STRING);
-        dataSource.setUser(DB_USER);
-        
-        // --- CRITICAL FIX ---
-        // Use the password we saved in App.java!
-        dataSource.setPassword(App.dbPassword); 
-        // --------------------
-
-        try (Connection connection = dataSource.getConnection()) {
+        // Use the new helper class!
+        try (Connection connection = DatabaseConnection.getConnection()) {
             
-            // Check if Name Exists
+            // 1. Check Display Name (Use backticks for spaces!)
             String checkNameSQL = "SELECT COUNT(*) FROM user WHERE `Display Name` = ?";
             try (PreparedStatement checkStmt = connection.prepareStatement(checkNameSQL)) {
                 checkStmt.setString(1, user.getDisplayName());
-                try (ResultSet rs = checkStmt.executeQuery()) {
-                    if (rs.next() && rs.getInt(1) > 0) {
-                        showAlert("Registration Failed", "Display Name already taken!");
-                        return false;
-                    }
+                ResultSet rs = checkStmt.executeQuery();
+                if (rs.next() && rs.getInt(1) > 0) {
+                    showAlert("Registration Failed", "Display Name already taken!");
+                    return false;
                 }
             }
 
-            // Check if Email Exists
+            // 2. Check Email
             String checkEmailSQL = "SELECT COUNT(*) FROM user WHERE `Email Address` = ?";
             try (PreparedStatement checkStmt = connection.prepareStatement(checkEmailSQL)) {
                 checkStmt.setString(1, user.getEmailAddress());
-                try (ResultSet rs = checkStmt.executeQuery()) {
-                    if (rs.next() && rs.getInt(1) > 0) {
-                        showAlert("Registration Failed", "Email already exists!");
-                        return false;
-                    }
+                ResultSet rs = checkStmt.executeQuery();
+                if (rs.next() && rs.getInt(1) > 0) {
+                    showAlert("Registration Failed", "Email already exists!");
+                    return false;
                 }
             }
 
-            // Insert User
+            // 3. Insert User (Note the column names!)
             String insertSQL = "INSERT INTO user (`Email Address`, `Password`, `Display Name`) VALUES (?, ?, ?)";
             try (PreparedStatement insertStmt = connection.prepareStatement(insertSQL)) {
                 insertStmt.setString(1, user.getEmailAddress());
@@ -143,7 +119,6 @@ public class SignupController {
                 insertStmt.setString(3, user.getDisplayName());
 
                 int rows = insertStmt.executeUpdate();
-
                 if (rows > 0) {
                     createFilesForUser(user);
                     showAlert("Success", "Account created successfully!");
@@ -154,13 +129,12 @@ public class SignupController {
         } catch (SQLException e) {
             e.printStackTrace();
             showAlert("Database Error", "Connection failed: " + e.getMessage());
-            return false;
         }
         return false;
     }
 
     private void createFilesForUser(User user) {
-        // Append to UserData.txt
+        // Append to UserData.txt (Legacy/Backup)
         try (PrintWriter outputStream = new PrintWriter(new FileOutputStream("UserData.txt", true))) {
             outputStream.println(user.getEmailAddress());
             outputStream.println(user.getDisplayName());
@@ -171,12 +145,10 @@ public class SignupController {
 
         // Create Journal Folders
         try {
-            // Using "Journal Entries" folder as root
-            Path path = Path.of("Journal Entries", user.getDisplayName());
+            // FIX: Use EMAIL for the folder name so it matches JournalPageController logic
+            Path path = Path.of("JournalEntries", user.getEmailAddress());
             Files.createDirectories(path);
-            
-            File datesFile = new File(path.toFile(), "Dates.txt");
-            datesFile.createNewFile();
+            System.out.println("Created folder for: " + user.getEmailAddress());
             
         } catch (IOException e) {
             System.out.println("Error creating folders: " + e.getMessage());
