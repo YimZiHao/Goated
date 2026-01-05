@@ -6,6 +6,9 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.ResourceBundle;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -25,7 +28,7 @@ public class JournalPageController implements Initializable {
     @FXML private Label dateLabel; 
     @FXML private Label weatherLabel;
     @FXML private Label moodLabel;
-    @FXML private Label displayName; // Make sure your FXML label has fx:id="displayName"
+    @FXML private Label displayName; 
     @FXML private TextArea journaltextArea; 
     @FXML private Button saveButton;
     @FXML private Button deleteButton; 
@@ -35,22 +38,19 @@ public class JournalPageController implements Initializable {
     private final String TODAY_LABEL = LocalDate.now().toString() + " (Today)";
     private final String WEATHER_API_URL = "https://api.data.gov.my/weather/forecast?contains=Lumpur";
     private final String MOOD_API_URL = "https://router.huggingface.co/hf-inference/models/distilbert/distilbert-base-uncased-finetuned-sst-2-english";
-    
-    // NEW: We use a folder instead of one big file
     private final String ROOT_DIR = "JournalEntries";
 
-    // Get the logged-in user's email
     private String currentUser = UserSession.getCurrentUser();
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         if (currentUser == null) currentUser = "test_user"; 
         
-        // 1. FETCH REAL NAME from DB for the Welcome Message
         String realName = getUserNameFromDB(currentUser);
         displayName.setText("Welcome, " + realName);
 
-        loadDates();
+        // 1. LOAD DATES FROM DB (Instead of dummy dates)
+        loadDatesFromDB();
 
         // Styling
         journaltextArea.setStyle("-fx-control-inner-background: rgba(255, 255, 255, 0.7); " +
@@ -64,7 +64,6 @@ public class JournalPageController implements Initializable {
 
         dateList.getSelectionModel().select(TODAY_LABEL);
 
-        // SAVE BUTTON
         saveButton.setOnAction(event -> {
             if (dateLabel.getText().equals(TODAY_LABEL)) {
                 saveEntryWithAI();
@@ -77,41 +76,90 @@ public class JournalPageController implements Initializable {
             }
         });
 
-        // DELETE BUTTON
         deleteButton.setOnAction(event -> deleteCurrentEntry());
     }
 
-    // --- HELPER: Get Name from DB ---
-    // --- HELPER: Get Name from DB ---
-    private String getUserNameFromDB(String email) {
-        String name = "User";
-        
-        // UPDATED QUERY: Table is 'user', Column is 'Display Name', User ID is 'Email Address'
-        String query = "SELECT `Display Name` FROM user WHERE `Email Address` = ?"; 
+    // --- HELPER: DATABASE DATES ---
+    // This method reads the comma-separated string from DB and fills the ListView
+    private void loadDatesFromDB() {
+        dateList.getItems().clear();
+        dateList.getItems().add(TODAY_LABEL); // Always show Today first
 
+        String query = "SELECT date_list FROM user_dates WHERE email = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {
             
-            stmt.setString(1, email);
+            stmt.setString(1, currentUser);
             ResultSet rs = stmt.executeQuery();
             
             if (rs.next()) {
-                name = rs.getString("Display Name"); // Match the column name exactly
+                String dates = rs.getString("date_list");
+                if (dates != null && !dates.isEmpty()) {
+                    String[] dateArray = dates.split(",");
+                    for (String d : dateArray) {
+                        // Don't duplicate "Today" if it's already in the list
+                        if (!d.equals(LocalDate.now().toString())) {
+                            dateList.getItems().add(d);
+                        }
+                    }
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
-            if (email.contains("@")) name = email.split("@")[0];
         }
-        return name;
     }
 
-    private void loadDates() {
-        dateList.getItems().clear();
-        LocalDate today = LocalDate.now();
-        dateList.getItems().add(TODAY_LABEL);
-        for (int i = 1; i <= 3; i++) {
-            dateList.getItems().add(today.minusDays(i).toString());
+    // This method adds or removes a date from the DB string
+    private void updateDateInDB(String dateToUpdate, boolean isAdding) {
+        // 1. Get current list
+        List<String> dates = new ArrayList<>();
+        String querySelect = "SELECT date_list FROM user_dates WHERE email = ?";
+        
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(querySelect)) {
+            stmt.setString(1, currentUser);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                String raw = rs.getString("date_list");
+                if (raw != null && !raw.isEmpty()) {
+                    dates.addAll(Arrays.asList(raw.split(",")));
+                }
+            }
+        } catch (Exception e) { e.printStackTrace(); }
+
+        // 2. Modify list
+        if (isAdding) {
+            if (!dates.contains(dateToUpdate)) dates.add(dateToUpdate);
+        } else {
+            dates.remove(dateToUpdate);
         }
+
+        // 3. Save back to DB
+        String newString = String.join(",", dates);
+        // Use "INSERT ... ON DUPLICATE KEY UPDATE" to handle both cases
+        String queryUpsert = "INSERT INTO user_dates (email, date_list) VALUES (?, ?) " +
+                             "ON DUPLICATE KEY UPDATE date_list = ?";
+        
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(queryUpsert)) {
+            stmt.setString(1, currentUser);
+            stmt.setString(2, newString);
+            stmt.setString(3, newString);
+            stmt.executeUpdate();
+        } catch (Exception e) { e.printStackTrace(); }
+    }
+
+    // --- HELPER: GET NAME ---
+    private String getUserNameFromDB(String email) {
+        String name = "User";
+        String query = "SELECT `Display Name` FROM user WHERE `Email Address` = ?"; 
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setString(1, email);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) name = rs.getString("Display Name");
+        } catch (Exception e) { if (email.contains("@")) name = email.split("@")[0]; }
+        return name;
     }
 
     private String cleanDate(String label) {
@@ -123,23 +171,18 @@ public class JournalPageController implements Initializable {
         statusLabel.setText(""); 
         String dateOnly = cleanDate(selectedDateLabel);
 
-        // LOAD FROM FOLDER
         String[] savedData = loadFromFolder(dateOnly);
 
         if (savedData != null) {
-            // Found File -> Edit Mode
             weatherLabel.setText("Weather: " + savedData[0]); 
             moodLabel.setText("Mood: " + savedData[1]);
             journaltextArea.setText(savedData[2]);
-            
             saveButton.setText("Update Entry"); 
             deleteButton.setVisible(true); 
         } else {
-            // No File -> Create Mode
             journaltextArea.setText("");
             deleteButton.setVisible(false);
             saveButton.setText("Save Entry");
-
             if (selectedDateLabel.equals(TODAY_LABEL)) {
                 fetchWeatherOnly();
                 moodLabel.setText("Mood: (Pending Analysis)");
@@ -153,15 +196,11 @@ public class JournalPageController implements Initializable {
         saveButton.setVisible(true);
     }
 
-    // --- FOLDER SYSTEM: SAVE ---
+    // --- FOLDER I/O ---
     private void saveToFolder(String targetDate, String weather, String mood, String text) {
-        // Path: JournalEntries / user@email.com /
         File userFolder = new File(ROOT_DIR + File.separator + currentUser);
-        if (!userFolder.exists()) {
-            userFolder.mkdirs(); 
-        }
+        if (!userFolder.exists()) userFolder.mkdirs();
 
-        // File: 2025-12-30.txt
         File entryFile = new File(userFolder, targetDate + ".txt");
 
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(entryFile))) {
@@ -169,7 +208,16 @@ public class JournalPageController implements Initializable {
             writer.newLine();
             writer.write(mood);
             writer.newLine();
-            writer.write(text); 
+            writer.write(text);
+            
+            // NEW: Update DB whenever we save!
+            updateDateInDB(targetDate, true); 
+            
+            // Refresh list to show new date immediately if needed
+            if (!dateList.getItems().contains(targetDate) && !targetDate.equals(LocalDate.now().toString())) {
+                dateList.getItems().add(targetDate);
+            }
+
         } catch (IOException e) {
             statusLabel.setText("Save Failed!");
             e.printStackTrace();
@@ -181,33 +229,33 @@ public class JournalPageController implements Initializable {
         });
     }
 
-    // --- FOLDER SYSTEM: LOAD ---
     private String[] loadFromFolder(String dateToFind) {
         File entryFile = new File(ROOT_DIR + File.separator + currentUser, dateToFind + ".txt");
-
         if (entryFile.exists()) {
             try (BufferedReader reader = new BufferedReader(new FileReader(entryFile))) {
                 String weather = reader.readLine();
                 String mood = reader.readLine();
                 String text = reader.lines().collect(Collectors.joining("\n"));
                 return new String[]{weather, mood, text};
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            } catch (IOException e) { e.printStackTrace(); }
         }
         return null; 
     }
 
-    // --- FOLDER SYSTEM: DELETE ---
     private void deleteCurrentEntry() {
         String targetDate = cleanDate(dateLabel.getText());
         File entryFile = new File(ROOT_DIR + File.separator + currentUser, targetDate + ".txt");
 
         if (entryFile.exists()) {
-            entryFile.delete(); 
+            entryFile.delete();
+            
+            // NEW: Remove from DB
+            updateDateInDB(targetDate, false);
+            
+            // Remove from UI List
+            dateList.getItems().remove(targetDate);
         }
         
-        // Reset UI
         journaltextArea.setText("");
         weatherLabel.setText("Weather: N/A");
         moodLabel.setText("Mood: N/A");
@@ -218,7 +266,7 @@ public class JournalPageController implements Initializable {
         if (dateLabel.getText().equals(TODAY_LABEL)) fetchWeatherOnly();
     }
 
-    // --- API LOGIC (Unchanged) ---
+    // --- API LOGIC ---
     private void fetchWeatherOnly() {
         new Thread(() -> {
             try {
@@ -239,7 +287,6 @@ public class JournalPageController implements Initializable {
             statusLabel.setText("Please write something!");
             return;
         }
-
         statusLabel.setText("Analyzing...");
         saveButton.setDisable(true);
 
@@ -266,9 +313,7 @@ public class JournalPageController implements Initializable {
                 moodLabel.setText("Mood: " + fMood);
                 statusLabel.setText("Saved!");
                 saveButton.setDisable(false);
-                
-                String todayDate = LocalDate.now().toString();
-                saveToFolder(todayDate, fWeather, fMood, journalText);
+                saveToFolder(LocalDate.now().toString(), fWeather, fMood, journalText);
             });
         }).start();
     }

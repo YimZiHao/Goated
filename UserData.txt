@@ -1,10 +1,10 @@
 s100201@student.fop
 Foo Bar
-HOd+LM<jh
+HOd+LM<Zh
 
 s100202@student.fop
 John Doe
-HOdKLM<Zi
+HOd+LM<Zi
 
 yimzihe@yahoo.com
 Yim Zi He
