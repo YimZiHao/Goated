@@ -51,6 +51,14 @@
                            <VBox.margin>
                               <Insets bottom="30.0" left="30.0" right="30.0" />
                            </VBox.margin></ListView>
+                        <Button mnemonicParsing="false" prefHeight="37.0" prefWidth="202.0" text="Weekly Summary">
+                           <VBox.margin>
+                              <Insets bottom="20.0" />
+                           </VBox.margin>
+                           <font>
+                              <Font name="Bookshelf Symbol 7" size="21.0" />
+                           </font>
+                        </Button>
                      </children>
                   </VBox>
                </children>

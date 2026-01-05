@@ -40,16 +40,19 @@ public class JournalPageController implements Initializable {
     private final String MOOD_API_URL = "https://router.huggingface.co/hf-inference/models/distilbert/distilbert-base-uncased-finetuned-sst-2-english";
     private final String ROOT_DIR = "JournalEntries";
 
-    private String currentUser = UserSession.getCurrentUser();
+    private String currentUserEmail = UserSession.getCurrentUser();
+    // NEW: We need to store the Name separately because your DB uses Name for dates
+    private String currentDisplayName = "User"; 
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
-        if (currentUser == null) currentUser = "test_user"; 
+        if (currentUserEmail == null) currentUserEmail = "test_user"; 
         
-        String realName = getUserNameFromDB(currentUser);
-        displayName.setText("Welcome, " + realName);
+        // 1. GET THE DISPLAY NAME FIRST (Crucial for your specific DB table)
+        currentDisplayName = getUserNameFromDB(currentUserEmail);
+        displayName.setText("Welcome, " + currentDisplayName);
 
-        // 1. LOAD DATES FROM DB (Instead of dummy dates)
+        // 2. LOAD DATES using the Display Name
         loadDatesFromDB();
 
         // Styling
@@ -79,25 +82,25 @@ public class JournalPageController implements Initializable {
         deleteButton.setOnAction(event -> deleteCurrentEntry());
     }
 
-    // --- HELPER: DATABASE DATES ---
-    // This method reads the comma-separated string from DB and fills the ListView
+    // --- HELPER: LOAD DATES (Matches your 'dates' table) ---
     private void loadDatesFromDB() {
         dateList.getItems().clear();
-        dateList.getItems().add(TODAY_LABEL); // Always show Today first
+        dateList.getItems().add(TODAY_LABEL); 
 
-        String query = "SELECT date_list FROM user_dates WHERE email = ?";
+        // UPDATED QUERY: Uses 'dates' table and 'Display Name' column
+        String query = "SELECT Dates FROM dates WHERE `Display Name` = ?";
+        
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {
             
-            stmt.setString(1, currentUser);
+            stmt.setString(1, currentDisplayName); // Use Name, not Email!
             ResultSet rs = stmt.executeQuery();
             
             if (rs.next()) {
-                String dates = rs.getString("date_list");
+                String dates = rs.getString("Dates");
                 if (dates != null && !dates.isEmpty()) {
                     String[] dateArray = dates.split(",");
                     for (String d : dateArray) {
-                        // Don't duplicate "Today" if it's already in the list
                         if (!d.equals(LocalDate.now().toString())) {
                             dateList.getItems().add(d);
                         }
@@ -109,18 +112,19 @@ public class JournalPageController implements Initializable {
         }
     }
 
-    // This method adds or removes a date from the DB string
+    // --- HELPER: UPDATE DATES (Matches your 'dates' table) ---
     private void updateDateInDB(String dateToUpdate, boolean isAdding) {
-        // 1. Get current list
         List<String> dates = new ArrayList<>();
-        String querySelect = "SELECT date_list FROM user_dates WHERE email = ?";
+        
+        // 1. Get current list using Display Name
+        String querySelect = "SELECT Dates FROM dates WHERE `Display Name` = ?";
         
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(querySelect)) {
-            stmt.setString(1, currentUser);
+            stmt.setString(1, currentDisplayName);
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
-                String raw = rs.getString("date_list");
+                String raw = rs.getString("Dates");
                 if (raw != null && !raw.isEmpty()) {
                     dates.addAll(Arrays.asList(raw.split(",")));
                 }
@@ -134,15 +138,14 @@ public class JournalPageController implements Initializable {
             dates.remove(dateToUpdate);
         }
 
-        // 3. Save back to DB
+        // 3. Save back using Display Name
         String newString = String.join(",", dates);
-        // Use "INSERT ... ON DUPLICATE KEY UPDATE" to handle both cases
-        String queryUpsert = "INSERT INTO user_dates (email, date_list) VALUES (?, ?) " +
-                             "ON DUPLICATE KEY UPDATE date_list = ?";
+        String queryUpsert = "INSERT INTO dates (`Display Name`, `Dates`) VALUES (?, ?) " +
+                             "ON DUPLICATE KEY UPDATE `Dates` = ?";
         
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(queryUpsert)) {
-            stmt.setString(1, currentUser);
+            stmt.setString(1, currentDisplayName);
             stmt.setString(2, newString);
             stmt.setString(3, newString);
             stmt.executeUpdate();
@@ -196,9 +199,8 @@ public class JournalPageController implements Initializable {
         saveButton.setVisible(true);
     }
 
-    // --- FOLDER I/O ---
     private void saveToFolder(String targetDate, String weather, String mood, String text) {
-        File userFolder = new File(ROOT_DIR + File.separator + currentUser);
+        File userFolder = new File(ROOT_DIR + File.separator + currentUserEmail);
         if (!userFolder.exists()) userFolder.mkdirs();
 
         File entryFile = new File(userFolder, targetDate + ".txt");
@@ -210,10 +212,8 @@ public class JournalPageController implements Initializable {
             writer.newLine();
             writer.write(text);
             
-            // NEW: Update DB whenever we save!
             updateDateInDB(targetDate, true); 
             
-            // Refresh list to show new date immediately if needed
             if (!dateList.getItems().contains(targetDate) && !targetDate.equals(LocalDate.now().toString())) {
                 dateList.getItems().add(targetDate);
             }
@@ -230,7 +230,7 @@ public class JournalPageController implements Initializable {
     }
 
     private String[] loadFromFolder(String dateToFind) {
-        File entryFile = new File(ROOT_DIR + File.separator + currentUser, dateToFind + ".txt");
+        File entryFile = new File(ROOT_DIR + File.separator + currentUserEmail, dateToFind + ".txt");
         if (entryFile.exists()) {
             try (BufferedReader reader = new BufferedReader(new FileReader(entryFile))) {
                 String weather = reader.readLine();
@@ -244,15 +244,11 @@ public class JournalPageController implements Initializable {
 
     private void deleteCurrentEntry() {
         String targetDate = cleanDate(dateLabel.getText());
-        File entryFile = new File(ROOT_DIR + File.separator + currentUser, targetDate + ".txt");
+        File entryFile = new File(ROOT_DIR + File.separator + currentUserEmail, targetDate + ".txt");
 
         if (entryFile.exists()) {
             entryFile.delete();
-            
-            // NEW: Remove from DB
             updateDateInDB(targetDate, false);
-            
-            // Remove from UI List
             dateList.getItems().remove(targetDate);
         }
         
