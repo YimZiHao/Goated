@@ -21,6 +21,14 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextArea;
 
+// --- IMPORTS FOR SCENE SWITCHING ---
+import javafx.event.ActionEvent; // <--- Added this!
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Node; // <--- Added this for "Node" casting
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.stage.Stage;
+
 public class JournalPageController implements Initializable {
 
     // --- FXML IDs ---
@@ -33,6 +41,8 @@ public class JournalPageController implements Initializable {
     @FXML private Button saveButton;
     @FXML private Button deleteButton; 
     @FXML private Label statusLabel;
+    @FXML private Button weeklySummaryButton; 
+    @FXML private Button logoutButton;
 
     // --- Constants ---
     private final String TODAY_LABEL = LocalDate.now().toString() + " (Today)";
@@ -41,18 +51,15 @@ public class JournalPageController implements Initializable {
     private final String ROOT_DIR = "JournalEntries";
 
     private String currentUserEmail = UserSession.getCurrentUser();
-    // NEW: We need to store the Name separately because your DB uses Name for dates
     private String currentDisplayName = "User"; 
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         if (currentUserEmail == null) currentUserEmail = "test_user"; 
         
-        // 1. GET THE DISPLAY NAME FIRST (Crucial for your specific DB table)
         currentDisplayName = getUserNameFromDB(currentUserEmail);
         displayName.setText("Welcome, " + currentDisplayName);
 
-        // 2. LOAD DATES using the Display Name
         loadDatesFromDB();
 
         // Styling
@@ -67,6 +74,7 @@ public class JournalPageController implements Initializable {
 
         dateList.getSelectionModel().select(TODAY_LABEL);
 
+        // --- BUTTON ACTIONS ---
         saveButton.setOnAction(event -> {
             if (dateLabel.getText().equals(TODAY_LABEL)) {
                 saveEntryWithAI();
@@ -80,20 +88,62 @@ public class JournalPageController implements Initializable {
         });
 
         deleteButton.setOnAction(event -> deleteCurrentEntry());
+
+        // --- WEEKLY SUMMARY CHECK ---
+        if (weeklySummaryButton != null) {
+            weeklySummaryButton.setOnAction(event -> switchtoWeeklySummary());
+        } else {
+            System.out.println("❌ ERROR: 'weeklySummaryButton' is NULL. Please check your fx:id in Scene Builder!");
+        }
     }
 
-    // --- HELPER: LOAD DATES (Matches your 'dates' table) ---
+    // --- SCENE SWITCHING METHODS ---
+
+    // 1. Weekly Summary
+    private void switchtoWeeklySummary() {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("weeklySummary-page.fxml"));
+            Parent root = loader.load();
+
+            Stage stage = (Stage) weeklySummaryButton.getScene().getWindow();
+            Scene scene = new Scene(root);
+            stage.setScene(scene);
+            stage.show();
+        } catch (IOException e) {
+            e.printStackTrace();
+            statusLabel.setText("Error loading page!");
+        }
+    }
+    
+    // 2. Logout / First Page (FIXED!)
+    @FXML
+    private void switchtoFirstPage(ActionEvent event) {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("first-page.fxml"));
+            Parent root = loader.load();
+
+            // Using event.getSource() makes it safer to find the window
+            Stage stage = (Stage)((Node)event.getSource()).getScene().getWindow();
+            Scene scene = new Scene(root);
+            stage.setScene(scene);
+            stage.show();
+        } catch (IOException e) {
+            e.printStackTrace(); 
+            statusLabel.setText("Error loading page!");
+        }
+    }
+
+    // --- HELPER: LOAD DATES ---
     private void loadDatesFromDB() {
         dateList.getItems().clear();
         dateList.getItems().add(TODAY_LABEL); 
 
-        // UPDATED QUERY: Uses 'dates' table and 'Display Name' column
         String query = "SELECT Dates FROM dates WHERE `Display Name` = ?";
         
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {
             
-            stmt.setString(1, currentDisplayName); // Use Name, not Email!
+            stmt.setString(1, currentDisplayName); 
             ResultSet rs = stmt.executeQuery();
             
             if (rs.next()) {
@@ -112,11 +162,10 @@ public class JournalPageController implements Initializable {
         }
     }
 
-    // --- HELPER: UPDATE DATES (Matches your 'dates' table) ---
+    // --- HELPER: UPDATE DATES ---
     private void updateDateInDB(String dateToUpdate, boolean isAdding) {
         List<String> dates = new ArrayList<>();
         
-        // 1. Get current list using Display Name
         String querySelect = "SELECT Dates FROM dates WHERE `Display Name` = ?";
         
         try (Connection conn = DatabaseConnection.getConnection();
@@ -131,14 +180,12 @@ public class JournalPageController implements Initializable {
             }
         } catch (Exception e) { e.printStackTrace(); }
 
-        // 2. Modify list
         if (isAdding) {
             if (!dates.contains(dateToUpdate)) dates.add(dateToUpdate);
         } else {
             dates.remove(dateToUpdate);
         }
 
-        // 3. Save back using Display Name
         String newString = String.join(",", dates);
         String queryUpsert = "INSERT INTO dates (`Display Name`, `Dates`) VALUES (?, ?) " +
                              "ON DUPLICATE KEY UPDATE `Dates` = ?";

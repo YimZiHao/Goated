@@ -51,12 +51,12 @@
                            <VBox.margin>
                               <Insets bottom="30.0" left="30.0" right="30.0" />
                            </VBox.margin></ListView>
-                        <Button mnemonicParsing="false" prefHeight="37.0" prefWidth="202.0" text="Weekly Summary">
+                        <Button fx:id="weeklySummaryButton" mnemonicParsing="false" prefHeight="37.0" prefWidth="202.0" text="Weekly Summary">
                            <VBox.margin>
                               <Insets bottom="20.0" />
                            </VBox.margin>
                            <font>
-                              <Font name="Bookshelf Symbol 7" size="21.0" />
+                              <Font name="Book Antiqua" size="21.0" />
                            </font>
                         </Button>
                      </children>
@@ -103,7 +103,7 @@
                               <Insets />
                            </VBox.margin>
                         </HBox>
-                        <Label fx:id="displayName">
+                        <Label fx:id="displayName" text="welcome">
                            <font>
                               <Font name="Book Antiqua" size="21.0" />
                            </font>
@@ -111,7 +111,7 @@
                               <Insets left="50.0" top="30.0" />
                            </VBox.margin>
                         </Label>
-                        <TextArea fx:id="journaltextArea" prefHeight="418.0" prefWidth="854.0" promptText="Write here...">
+                        <TextArea fx:id="journaltextArea" prefHeight="582.0" prefWidth="794.0" promptText="Write here...">
                            <VBox.margin>
                               <Insets bottom="40.0" left="50.0" right="50.0" top="20.0" />
                            </VBox.margin>
@@ -119,7 +119,7 @@
                               <Font name="Book Antiqua" size="22.0" />
                            </font>
                         </TextArea>
-                        <HBox alignment="TOP_RIGHT" prefHeight="274.0" prefWidth="894.0">
+                        <HBox alignment="TOP_RIGHT" prefHeight="0.0" prefWidth="894.0">
                            <VBox.margin>
                               <Insets top="80.0" />
                            </VBox.margin>
@@ -149,6 +149,21 @@
                                  </font>
                               </Label>
                            </children>
+                        </HBox>
+                        <HBox alignment="CENTER_RIGHT" prefHeight="100.0" prefWidth="200.0">
+                           <children>
+                              <Button fx:id="logoutButton" mnemonicParsing="false" onAction="#switchtoFirstPage" text="Logout" textFill="#bc2525">
+                                 <font>
+                                    <Font name="Book Antiqua" size="20.0" />
+                                 </font>
+                                 <HBox.margin>
+                                    <Insets bottom="100.0" right="50.0" top="40.0" />
+                                 </HBox.margin>
+                              </Button>
+                           </children>
+                           <VBox.margin>
+                              <Insets />
+                           </VBox.margin>
                         </HBox>
                      </children>
                   </VBox>
