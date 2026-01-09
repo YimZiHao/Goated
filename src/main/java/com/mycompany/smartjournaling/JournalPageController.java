@@ -34,7 +34,7 @@ public class JournalPageController implements Initializable {
     // --- FXML IDs ---
     @FXML private ListView<String> dateList;
     @FXML private Label dateLabel; 
-    @FXML private Label weatherLabel;
+    @FXML public Label weatherLabel;
     @FXML private Label moodLabel;
     @FXML private Label displayName; 
     @FXML private TextArea journaltextArea; 
@@ -46,7 +46,7 @@ public class JournalPageController implements Initializable {
 
     // --- Constants ---
     private final String TODAY_LABEL = LocalDate.now().toString() + " (Today)";
-    private final String WEATHER_API_URL = "https://api.data.gov.my/weather/forecast?contains=Lumpur";
+    private final String WEATHER_API_URL = "https://api.data.gov.my/weather/forecast?contains=Lumpur@location__location_name";
     private final String MOOD_API_URL = "https://router.huggingface.co/hf-inference/models/distilbert/distilbert-base-uncased-finetuned-sst-2-english";
     private final String ROOT_DIR = "JournalEntries";
 
