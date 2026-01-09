@@ -76,7 +76,7 @@
                            <children>
                               <Label fx:id="dateLabel" text="Select a Date">
                                  <font>
-                                    <Font name="Book Antiqua" size="27.0" />
+                                    <Font name="Book Antiqua" size="20.0" />
                                  </font>
                                  <HBox.margin>
                                     <Insets top="20.0" />
@@ -84,7 +84,7 @@
                               </Label>
                               <Label fx:id="weatherLabel" text="Weather:">
                                  <font>
-                                    <Font name="Book Antiqua" size="27.0" />
+                                    <Font name="Book Antiqua" size="20.0" />
                                  </font>
                                  <HBox.margin>
                                     <Insets top="20.0" />
@@ -92,7 +92,7 @@
                               </Label>
                               <Label fx:id="moodLabel" text="Mood:">
                                  <font>
-                                    <Font name="Book Antiqua" size="27.0" />
+                                    <Font name="Book Antiqua" size="20.0" />
                                  </font>
                                  <HBox.margin>
                                     <Insets top="20.0" />

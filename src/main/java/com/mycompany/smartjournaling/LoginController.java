@@ -28,39 +28,22 @@ public class LoginController implements Initializable {
     @FXML private PasswordField passwordField; 
     @FXML private Button loginButton;
     @FXML private Button backButton;
-
-    // --- Show Password Elements ---
     @FXML private TextField passwordTextField; 
     @FXML private CheckBox showPasswordCheckBox;
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
-        // SAFETY CHECK: Only run this logic if the new fields exist in FXML
-        if (passwordTextField != null && showPasswordCheckBox != null) {
+        if (passwordTextField != null) {
             
-            // 1. Sync the text between hidden and visible fields
             passwordTextField.textProperty().bindBidirectional(passwordField.textProperty());
-
-            // 2. Toggle visibility
-            showPasswordCheckBox.selectedProperty().addListener((obs, oldVal, isSelected) -> {
-                if (isSelected) {
-                    passwordTextField.setVisible(true);
-                    passwordField.setVisible(false);
-                } else {
-                    passwordTextField.setVisible(false);
-                    passwordField.setVisible(true);
-                }
-            });
-
-            // Start hidden
             passwordTextField.setVisible(false);
             passwordField.setVisible(true);
         } else {
-            System.out.println("WARNING: passwordTextField or CheckBox is missing from FXML. Show Password feature disabled.");
+            System.out.println("WARNING: passwordTextField is missing from FXML. Show Password feature disabled.");
         }
     }
 
-    // --- NAVIGATION ---
+    // NAVIGATION
     @FXML
     private void switchScene(ActionEvent event, String fxmlFileName) throws IOException {
         FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlFileName));
@@ -76,7 +59,6 @@ public class LoginController implements Initializable {
         switchScene(event, "first-page.fxml");
     }
     
-    // --- MAIN LOGIN LOGIC ---
     @FXML
     private void switchtoWelcomePage(ActionEvent event) throws IOException {
         String inputEmail = emailField.getText();
@@ -87,15 +69,12 @@ public class LoginController implements Initializable {
             return;
         }
 
-        // 1. ENCRYPT PASSWORD
         User tempUser = new User(inputEmail, "dummyName", inputPass);
         String encryptedPassword = tempUser.getPassword(); 
 
-        // 2. CHECK DATABASE
         String displayName = validateLogin(inputEmail, encryptedPassword);
 
         if (displayName != null) {
-            // SUCCESS
             UserSession.setCurrentUser(inputEmail); 
             
             FXMLLoader loader = new FXMLLoader(getClass().getResource("welcome-page.fxml"));

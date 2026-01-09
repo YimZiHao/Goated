@@ -6,11 +6,8 @@ import java.sql.SQLException;
 
 public class DatabaseConnection {
     
-    // UPDATED: Database name is 'goated' based on your SQL file
     private static final String URL = "jdbc:mysql://localhost:3306/smart_journal"; 
-    private static final String USER = "root"; 
-    
-    // USE THE PASSWORD FROM YOUR APP.JAVA
+    private static final String USER = "root";
     private static final String PASSWORD = App.dbPassword; 
 
     public static Connection getConnection() throws SQLException {

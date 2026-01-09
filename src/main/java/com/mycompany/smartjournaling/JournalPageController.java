@@ -20,18 +20,15 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextArea;
-
-// --- IMPORTS FOR SCENE SWITCHING ---
-import javafx.event.ActionEvent; // <--- Added this!
+import javafx.event.ActionEvent;
 import javafx.fxml.FXMLLoader;
-import javafx.scene.Node; // <--- Added this for "Node" casting
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
 public class JournalPageController implements Initializable {
 
-    // --- FXML IDs ---
     @FXML private ListView<String> dateList;
     @FXML private Label dateLabel; 
     @FXML public Label weatherLabel;
@@ -44,18 +41,25 @@ public class JournalPageController implements Initializable {
     @FXML private Button weeklySummaryButton; 
     @FXML private Button logoutButton;
 
-    // --- Constants ---
     private final String TODAY_LABEL = LocalDate.now().toString() + " (Today)";
     private final String WEATHER_API_URL = "https://api.data.gov.my/weather/forecast?contains=Lumpur@location__location_name";
     private final String MOOD_API_URL = "https://router.huggingface.co/hf-inference/models/distilbert/distilbert-base-uncased-finetuned-sst-2-english";
     private final String ROOT_DIR = "JournalEntries";
 
-    private String currentUserEmail = UserSession.getCurrentUser();
+    private String currentUserEmail; // Changed: Don't initialize here
     private String currentDisplayName = "User"; 
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
-        if (currentUserEmail == null) currentUserEmail = "test_user"; 
+        // 1. GRAB LATEST USER (Fixes the "Wrong Account" bug)
+        currentUserEmail = UserSession.getCurrentUser();
+        
+        if (currentUserEmail == null) {
+            System.out.println("DEBUG: No user in session. Defaulting to test_user.");
+            currentUserEmail = "test_user"; 
+        } else {
+            System.out.println("DEBUG: Journal loaded for: " + currentUserEmail);
+        }
         
         currentDisplayName = getUserNameFromDB(currentUserEmail);
         displayName.setText("Welcome, " + currentDisplayName);
@@ -92,19 +96,15 @@ public class JournalPageController implements Initializable {
         // --- WEEKLY SUMMARY CHECK ---
         if (weeklySummaryButton != null) {
             weeklySummaryButton.setOnAction(event -> switchtoWeeklySummary());
-        } else {
-            System.out.println("❌ ERROR: 'weeklySummaryButton' is NULL. Please check your fx:id in Scene Builder!");
         }
     }
 
     // --- SCENE SWITCHING METHODS ---
 
-    // 1. Weekly Summary
     private void switchtoWeeklySummary() {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("weeklySummary-page.fxml"));
             Parent root = loader.load();
-
             Stage stage = (Stage) weeklySummaryButton.getScene().getWindow();
             Scene scene = new Scene(root);
             stage.setScene(scene);
@@ -115,14 +115,14 @@ public class JournalPageController implements Initializable {
         }
     }
     
-    // 2. Logout / First Page (FIXED!)
     @FXML
     private void switchtoFirstPage(ActionEvent event) {
+        UserSession.setCurrentUser(null); 
+        System.out.println("DEBUG: Session cleared. Logging out.");
+
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("first-page.fxml"));
             Parent root = loader.load();
-
-            // Using event.getSource() makes it safer to find the window
             Stage stage = (Stage)((Node)event.getSource()).getScene().getWindow();
             Scene scene = new Scene(root);
             stage.setScene(scene);
@@ -133,21 +133,22 @@ public class JournalPageController implements Initializable {
         }
     }
 
-    // --- HELPER: LOAD DATES ---
+    // --- HELPER: LOAD DATES FROM DB ---
     private void loadDatesFromDB() {
         dateList.getItems().clear();
         dateList.getItems().add(TODAY_LABEL); 
 
-        String query = "SELECT Dates FROM dates WHERE `Display Name` = ?";
+        // Uses 'user_dates' table and 'email'
+        String query = "SELECT date_list FROM user_dates WHERE email = ?";
         
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {
             
-            stmt.setString(1, currentDisplayName); 
+            stmt.setString(1, currentUserEmail); 
             ResultSet rs = stmt.executeQuery();
             
             if (rs.next()) {
-                String dates = rs.getString("Dates");
+                String dates = rs.getString("date_list");
                 if (dates != null && !dates.isEmpty()) {
                     String[] dateArray = dates.split(",");
                     for (String d : dateArray) {
@@ -162,41 +163,49 @@ public class JournalPageController implements Initializable {
         }
     }
 
-    // --- HELPER: UPDATE DATES ---
+    // --- HELPER: UPDATE DATES IN DB ---
     private void updateDateInDB(String dateToUpdate, boolean isAdding) {
         List<String> dates = new ArrayList<>();
         
-        String querySelect = "SELECT Dates FROM dates WHERE `Display Name` = ?";
+        // 1. Get current list from 'user_dates'
+        String querySelect = "SELECT date_list FROM user_dates WHERE email = ?";
         
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(querySelect)) {
-            stmt.setString(1, currentDisplayName);
+            stmt.setString(1, currentUserEmail); 
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
-                String raw = rs.getString("Dates");
+                String raw = rs.getString("date_list");
                 if (raw != null && !raw.isEmpty()) {
                     dates.addAll(Arrays.asList(raw.split(",")));
                 }
             }
         } catch (Exception e) { e.printStackTrace(); }
 
+        // 2. Modify list (Add or Remove date)
         if (isAdding) {
             if (!dates.contains(dateToUpdate)) dates.add(dateToUpdate);
         } else {
             dates.remove(dateToUpdate);
         }
 
+        // 3. Save back to 'user_dates'
         String newString = String.join(",", dates);
-        String queryUpsert = "INSERT INTO dates (`Display Name`, `Dates`) VALUES (?, ?) " +
-                             "ON DUPLICATE KEY UPDATE `Dates` = ?";
+        
+        String queryUpsert = "INSERT INTO user_dates (email, date_list) VALUES (?, ?) " +
+                             "ON DUPLICATE KEY UPDATE date_list = ?";
         
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(queryUpsert)) {
-            stmt.setString(1, currentDisplayName);
+            stmt.setString(1, currentUserEmail);
             stmt.setString(2, newString);
             stmt.setString(3, newString);
             stmt.executeUpdate();
-        } catch (Exception e) { e.printStackTrace(); }
+            System.out.println("DEBUG: DB updated for " + currentUserEmail + " -> " + newString);
+        } catch (Exception e) { 
+            e.printStackTrace(); 
+            System.out.println("Failed to update database!");
+        }
     }
 
     // --- HELPER: GET NAME ---

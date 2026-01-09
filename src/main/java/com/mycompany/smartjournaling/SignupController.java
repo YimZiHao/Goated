@@ -1,7 +1,6 @@
 package com.mycompany.smartjournaling;
 
 import com.mycompany.fopassignment.User; 
-import com.mysql.cj.jdbc.MysqlDataSource;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -25,13 +24,8 @@ import javafx.stage.Stage;
 
 public class SignupController {
 
-    private final static String CONN_STRING = "jdbc:mysql://localhost:3306/smart_journal";
-    private final static String DB_USER = "root";     
-
     @FXML Button signupButton;
     @FXML Button backButton;
-    
-    // NEW: Field for the user to type their name
     @FXML private TextField nameField; 
     @FXML private TextField emailField;
     @FXML private PasswordField passwordField;
@@ -53,25 +47,24 @@ public class SignupController {
 
     @FXML
     private void switchtoWelcomePage(ActionEvent event) throws IOException {
-        // 1. Get Manual Input
         String displayName = nameField.getText();
         String email = emailField.getText();
         String pass = passwordField.getText();
 
-        // 2. Validate
         if (displayName.isEmpty() || email.isEmpty() || pass.isEmpty()) {
             showAlert("Error", "Please fill in all fields (Name, Email, Password).");
             return;
         }
 
-        // 3. Create User Object
         User newUser = new User(email, displayName, pass);
 
-        // 4. Attempt Registration
         boolean success = registerUserInDB(newUser);
 
-        // 5. Switch Scene if successful
         if (success) {
+            UserSession.setCurrentUser(email); 
+            System.out.println("DEBUG: Session updated to new user: " + email);
+            // ---------------------------------------------
+
             FXMLLoader loader = new FXMLLoader(getClass().getResource("welcome-page.fxml"));
             Parent root = loader.load();
 
@@ -86,10 +79,7 @@ public class SignupController {
     }
 
     private boolean registerUserInDB(User user) {
-        // Use the new helper class!
         try (Connection connection = DatabaseConnection.getConnection()) {
-            
-            // 1. Check Display Name (Use backticks for spaces!)
             String checkNameSQL = "SELECT COUNT(*) FROM user WHERE `Display Name` = ?";
             try (PreparedStatement checkStmt = connection.prepareStatement(checkNameSQL)) {
                 checkStmt.setString(1, user.getDisplayName());
@@ -99,8 +89,6 @@ public class SignupController {
                     return false;
                 }
             }
-
-            // 2. Check Email
             String checkEmailSQL = "SELECT COUNT(*) FROM user WHERE `Email Address` = ?";
             try (PreparedStatement checkStmt = connection.prepareStatement(checkEmailSQL)) {
                 checkStmt.setString(1, user.getEmailAddress());
@@ -110,8 +98,6 @@ public class SignupController {
                     return false;
                 }
             }
-
-            // 3. Insert User (Note the column names!)
             String insertSQL = "INSERT INTO user (`Email Address`, `Password`, `Display Name`) VALUES (?, ?, ?)";
             try (PreparedStatement insertStmt = connection.prepareStatement(insertSQL)) {
                 insertStmt.setString(1, user.getEmailAddress());
@@ -134,7 +120,6 @@ public class SignupController {
     }
 
     private void createFilesForUser(User user) {
-        // Append to UserData.txt (Legacy/Backup)
         try (PrintWriter outputStream = new PrintWriter(new FileOutputStream("UserData.txt", true))) {
             outputStream.println(user.getEmailAddress());
             outputStream.println(user.getDisplayName());
@@ -142,10 +127,7 @@ public class SignupController {
         } catch (IOException e) {
             System.out.println("Error writing text file: " + e.getMessage());
         }
-
-        // Create Journal Folders
         try {
-            // FIX: Use EMAIL for the folder name so it matches JournalPageController logic
             Path path = Path.of("JournalEntries", user.getEmailAddress());
             Files.createDirectories(path);
             System.out.println("Created folder for: " + user.getEmailAddress());
