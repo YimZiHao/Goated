@@ -63,7 +63,6 @@ public class SignupController {
         if (success) {
             UserSession.setCurrentUser(email); 
             System.out.println("DEBUG: Session updated to new user: " + email);
-            // ---------------------------------------------
 
             FXMLLoader loader = new FXMLLoader(getClass().getResource("welcome-page.fxml"));
             Parent root = loader.load();
@@ -77,7 +76,7 @@ public class SignupController {
             stage.show();
         }
     }
-
+    // db user table
     private boolean registerUserInDB(User user) {
         try (Connection connection = DatabaseConnection.getConnection()) {
             String checkNameSQL = "SELECT COUNT(*) FROM user WHERE `Display Name` = ?";
