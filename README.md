@@ -13,3 +13,11 @@ In git bash
 In mysql workshop, check if smart_journal schema exists.
 
 Users have to remember their MySQL root account password as it will be asked of them for the program to run. 
+
+In Netbeans, 
+After opening the project, do these few steps:
+1. Right click on the project.
+2. Click properties.
+3. Go to run.
+4. Add this as the main class 'com.mycompany.smartjournaling.Launcher'. It will not show up when you choose browse main class.
+5. Run the launcher and enjoy the program. :)
