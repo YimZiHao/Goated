@@ -1,3 +1,15 @@
-This will be where we do our project - Topic 3: Smart Journaling. 
-Please learn how to use github and git using this YouTube playlist: https://www.youtube.com/playlist?list=PL0lo9MOBetEFcp4SCWinBdpml9B2U25-f
-Or just watch this simplified video that is more specifically about using github with netbeans: https://youtu.be/UOIPS-ewFHg?si=jGyZ6aygalVFmqlm
+This is the GitHub repository for WIX1002 FOP assignment OCC11 G10 Topic 3: Smart Journaling. 
+
+Before running the smart journal, please ensure MySQL is installed and clone the user database first. 
+Steps to clone MySQL database:
+In git bash
+1. git clone https://github.com/YimZiHao/Goated.git
+2. cd Goated
+3. git checkout master
+4. ⁠mysql -u root -p
+5. ⁠CREATE DATABASE smart_journal;
+6. ⁠EXIT;
+4. mysql -u root -p smart_journal < path/to/goated.sql 
+In mysql workshop, check if smart_journal schema exists.
+
+Users have to remember their MySQL root account password as it will be asked of them for the program to run. 
