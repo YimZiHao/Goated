@@ -1,4 +1,5 @@
 This is the GitHub repository for WIX1002 FOP assignment OCC11 G10 Topic 3: Smart Journaling. 
+*Master branch is where our final work or code is.
 
 Before running the smart journal, please ensure MySQL is installed and clone the user database first. 
 Steps to clone MySQL database:
