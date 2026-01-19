@@ -61,7 +61,7 @@ public class WeeklySummaryController implements Initializable {
     }
 
     private void generateReport() {
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(); // LocalDate is a built-in
 
         List<String> validDates = getValidDatesFromDB();
 
@@ -86,10 +86,10 @@ public class WeeklySummaryController implements Initializable {
                     if (weather != null) {
                         String w = weather.toLowerCase();
 
-                        if (w.contains("hujan") || w.contains("ribut") || w.contains("petir")) {
-                            rainyCount++;
-                        } else if (w.contains("tiada hujan") || w.contains("cerah") || w.contains("baik")) {
+                        if (w.contains("tiada hujan") || w.contains("cerah") || w.contains("baik")) {
                             sunnyCount++;
+                        } else if (w.contains("hujan") || w.contains("ribut") || w.contains("petir")) {
+                            rainyCount++;
                         } else {
                             sunnyCount++;
                         }
@@ -98,7 +98,7 @@ public class WeeklySummaryController implements Initializable {
                     String mood = reader.readLine();
                     if (mood != null) {
                         String m = mood.toUpperCase();
-                        if (m.contains("POSITIVE") || m.contains("HAPPY") || m.contains("JOY")) {
+                        if (m.contains("POSITIVE")) {
                             happyCount++;
                         } else {
                             sadCount++;
@@ -121,7 +121,7 @@ public class WeeklySummaryController implements Initializable {
                 sb.append("You wrote only ").append(entriesCount).append(" entry this week.\n\n");
             } else {
                 sb.append("You wrote ").append(entriesCount).append(" entries this week.\n\n");
-            }
+            } // append is basically adds the next line at the end of the list
 
             // Mood Summary
             if (happyCount > sadCount) {
