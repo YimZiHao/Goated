@@ -15,6 +15,8 @@ In mysql workshop, check if smart_journal schema exists.
 
 Users have to remember their MySQL root account password as it will be asked of them for the program to run. 
 
+In .env file, the token is empty. In order for sentiment analysis to work, a Bearer token needs to be manually added. 
+
 In Netbeans, 
 After opening the project, do these few steps:
 1. Right click on the project.
